@@ -24,7 +24,7 @@ java -cp target/invitationmodel-1.0.jar nl.uva.illc.dataselection.InvitationMode
 
 ##### Example
 
-If you have a indomain corpus in-domain.l1, indomain.l2 and a mix-domain corpus mixdomain.l1, mixdomain.l2.
+If you have a parallel indomain corpus in-domain.l1, indomain.l2 and a parallel mix-domain corpus mixdomain.l1, mixdomain.l2.
 Then you can execute this utility as follow:
 
 `java -cp target/invitationmodel-1.0.jar nl.uva.illc.dataselection.InvitationModel -cin indomain -cmix mixdomain -src l1 -trg l2 -i 10`
