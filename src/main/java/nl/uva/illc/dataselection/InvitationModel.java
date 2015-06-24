@@ -322,8 +322,8 @@ public class InvitationModel {
 
 		for (Result r : sortedResult) {
 
-			int ssent[] = src_mixdomain[r.sentenceNumber];
-			int tsent[] = trg_mixdomain[r.sentenceNumber];
+			int ssent[] = src_mixdomain[r.sentenceNumber-1];
+			int tsent[] = trg_mixdomain[r.sentenceNumber-1];
 
 			out_score.println(r.sentenceNumber + "\t" + r.score);
 
