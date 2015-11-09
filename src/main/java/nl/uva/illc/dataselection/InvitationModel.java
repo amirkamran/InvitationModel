@@ -103,7 +103,15 @@ public class InvitationModel {
 	static float lm[][] = null;
 
 	static float LOG_0_5 = (float) Math.log(0.5);
-	static float CONF_THRESHOLD = (float) Math.log(0.8);
+	
+	// default confidence threshold: use to decide which sentences
+	// will update the translation table 
+	static float CONF_THRESHOLD = (float) Math.log(0.5);
+	
+	// default convergence threshold: How much change in PD1 is significant
+	// to continue to next iteration
+	static float CONV_THRESHOLD = 0.00001f;
+	
 
 	static float PD1 = LOG_0_5;
 	static float PD0 = LOG_0_5;
@@ -146,7 +154,8 @@ public class InvitationModel {
 		options.addOption("src", "src-language", true, "Source Language");
 		options.addOption("trg", "trg-language", true, "Target Language");
 		options.addOption("i", "max-iterations", true, "Maximum Iterations");
-		options.addOption("th", "threshold", true, "This threshold deicdes which sentences updates translation tables. Default is 0.8");
+		options.addOption("th", "threshold", true, "This threshold deicdes which sentences updates translation tables. Default is 0.5");
+		options.addOption("cf", "conv_threshold", true, "This threshold decide if the convergence is reached. Default is 0.00001");		
 
 		CommandLineParser parser = new GnuParser();
 		try {
@@ -165,6 +174,11 @@ public class InvitationModel {
 				if (cmd.hasOption("th")) {
 					CONF_THRESHOLD = (float) Math.log(Double.parseDouble(cmd.getOptionValue("th")));
 				}
+				
+				if (cmd.hasOption("cf")) {
+					CONV_THRESHOLD = (float) Float.parseFloat(cmd.getOptionValue("cf"));
+				}
+				
 
 			} else {
 				System.out.println("Missing required argumetns!");
@@ -435,7 +449,7 @@ public class InvitationModel {
 			
 			writeResult(i, results);
 			
-			if(i>1 && Math.abs(Math.exp(newPD1) - Math.exp(PD1)) < 0.001) {
+			if(i>1 && Math.abs(Math.exp(newPD1) - Math.exp(PD1)) <= CONV_THRESHOLD) {
 				log.info("Convergence threshold reached.");
 				break;
 			}
