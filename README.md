@@ -20,6 +20,12 @@ java -cp target/invitationmodel-1.0.jar nl.uva.illc.dataselection.InvitationMode
 -i,--max-iterations <arg>         Maximum Iterations
 -src,--src-language <arg>         Source Language
 -trg,--trg-language <arg>         Target Language
+ -th,--threshold <arg>             This threshold deicdes which sentences
+                                   updates translation tables. Default is
+                                   0.5
+ -cf,--conv_threshold <arg>        This threshold decide if the
+                                   convergence is reached. Default is
+                                   0.00001
  ```
 
 ##### Example
@@ -27,4 +33,4 @@ java -cp target/invitationmodel-1.0.jar nl.uva.illc.dataselection.InvitationMode
 If you have a parallel indomain corpus in-domain.l1, indomain.l2 and a parallel mix-domain corpus mixdomain.l1, mixdomain.l2.
 Then you can execute this utility as follow:
 
-`java -cp target/invitationmodel-1.0.jar nl.uva.illc.dataselection.InvitationModel -cin indomain -cmix mixdomain -src l1 -trg l2 -i 10`
+`java -cp target/invitationmodel-1.0.jar nl.uva.illc.dataselection.InvitationModel -cin indomain -cmix mixdomain -src l1 -trg l2 -i 10 -th 0.5 -cf 0.00001`
