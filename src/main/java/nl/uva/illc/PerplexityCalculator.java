@@ -41,18 +41,19 @@ public class PerplexityCalculator {
 	public static void main(String args[]) throws InterruptedException {
 		
 		int files = Integer.parseInt(args[0]);
+		String lang = args[1];
 		
 		perp = new double[files][19];
 		
 		new File("./temp").mkdir();
 		
-		latch = new CountDownLatch(files*19);
+		latch = new CountDownLatch(files*perp[0].length);
 		for(int i=1;i<=perp.length;i++) {
-			String fileName = "selected" + i + ".es";
+			String fileName = "selected" + i + "." + lang;
 			Future f1 = splitFile(fileName, 100000);
 			for(int j=1;j<=perp[i-1].length;j++) {
-				Future f2 = runCommand("./ngram-count -order 4 -interpolate -kndiscount3 -kndiscount4 -lm ./temp/" + fileName+"."+j+".lm -text ./temp/" + fileName+"."+j , f1);
-				Future f3 = runCommand("./ngram -lm ./temp/" + fileName+"."+j +".lm -ppl ./test.es > ./temp/" + fileName+"."+j + ".ppl", f2);
+				Future f2 = runCommand("./ngram-count -order 5 -interpolate -kndiscount3 -kndiscount5 -lm ./temp/" + fileName+"."+j+".lm -text ./temp/" + fileName+"."+j , f1);
+				Future f3 = runCommand("./ngram -lm ./temp/" + fileName+"."+j +".lm -ppl ./test." + lang + " > ./temp/" + fileName+"."+j + ".ppl", f2);
 				readPpl("./temp/" + fileName+"."+j + ".ppl", i-1, j-1, f3);
 			}
 		}

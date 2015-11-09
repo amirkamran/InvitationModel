@@ -23,6 +23,7 @@ import edu.berkeley.nlp.lm.NgramLanguageModel;
 import edu.berkeley.nlp.lm.StringWordIndexer;
 import edu.berkeley.nlp.lm.io.ArpaLmReader;
 import edu.berkeley.nlp.lm.io.LmReaders;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -42,9 +43,10 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-import net.openhft.koloboke.collect.map.hash.HashIntDoubleMap;
-import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
+import net.openhft.koloboke.collect.map.hash.HashIntFloatMap;
+import net.openhft.koloboke.collect.map.hash.HashIntFloatMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMap;
@@ -61,25 +63,21 @@ import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-
-
 /**
-* Invitation based data selection approach exploits in-domain data
-* (both monolingual and bilingual) as prior to guide word alignment
-* and phrase pair estimates in the large mix-domain corpus. As a 
-* by-product, accurate estimates for P(D|e,f) of the mixed-domain 
-* sentences are produced (with D being either in-domain or out-of-domain),
-* which can be used to rank the sentences in Dmix according to their
-* relevance to Din.
-* 
-* For more information see:
-* Hoang, Cuong and Sima'an, Khalil (2014): Latent Domain Translation Models
-* in Mix-of-Domains Haystack, Proceedings of COLING 2014, the 25th 
-* International Conference on Computational Linguistics
-* http://www.aclweb.org/anthology/C14-1182.pdf
-*  
-* @author Amir Kamran 
-*/
+ * Invitation based data selection approach exploits in-domain data (both
+ * monolingual and bilingual) as prior to guide word alignment and phrase pair
+ * estimates in the large mix-domain corpus. As a by-product, accurate estimates
+ * for P(D|e,f) of the mixed-domain sentences are produced (with D being either
+ * in-domain or out-of-domain), which can be used to rank the sentences in Dmix
+ * according to their relevance to Din.
+ * 
+ * For more information see: Hoang, Cuong and Sima'an, Khalil (2014): Latent
+ * Domain Translation Models in Mix-of-Domains Haystack, Proceedings of COLING
+ * 2014, the 25th International Conference on Computational Linguistics
+ * http://www.aclweb.org/anthology/C14-1182.pdf
+ * 
+ * @author Amir Kamran
+ */
 
 public class InvitationModel {
 
@@ -89,7 +87,7 @@ public class InvitationModel {
 	static String MIX = null;
 	static String SRC = null;
 	static String TRG = null;
-	
+
 	static int iMAX = 10;
 
 	static int src_indomain[][] = null;
@@ -102,10 +100,13 @@ public class InvitationModel {
 	static HashObjIntMap<String> src_codes = null;
 	static HashObjIntMap<String> trg_codes = null;
 
-	static NgramLanguageModel<String> lm[] = null;
+	static float lm[][] = null;
 
-	static double PD1 = 0.5;
-	static double PD0 = 0.5;
+	static float LOG_0_5 = (float) Math.log(0.5);
+	static float CONF_THRESHOLD = (float) Math.log(0.8);
+
+	static float PD1 = LOG_0_5;
+	static float PD0 = LOG_0_5;
 
 	static TranslationTable ttable[] = new TranslationTable[4];
 
@@ -114,9 +115,10 @@ public class InvitationModel {
 
 	public static HashIntIntMap ignore = HashIntIntMaps.newMutableMap();
 
-	public static double n = 0.5d;
-	public static double V = 100000d;
-	public static double p = 1d / V;
+	public static float n = 0.5f;
+	public static float V = 500000f;
+	public static float nV = n * V;
+	public static float p = -(float) Math.log(V);
 
 	public static void main(String args[]) throws IOException,
 			InterruptedException {
@@ -127,6 +129,11 @@ public class InvitationModel {
 		burnIN();
 		createLM();
 		training();
+
+		jobs.shutdown();
+
+		jobs.awaitTermination(10, TimeUnit.MINUTES);
+
 		log.info("END");
 	}
 
@@ -139,6 +146,7 @@ public class InvitationModel {
 		options.addOption("src", "src-language", true, "Source Language");
 		options.addOption("trg", "trg-language", true, "Target Language");
 		options.addOption("i", "max-iterations", true, "Maximum Iterations");
+		options.addOption("th", "threshold", true, "This threshold deicdes which sentences updates translation tables. Default is 0.8");
 
 		CommandLineParser parser = new GnuParser();
 		try {
@@ -149,11 +157,15 @@ public class InvitationModel {
 				IN = cmd.getOptionValue("cin");
 				SRC = cmd.getOptionValue("src");
 				TRG = cmd.getOptionValue("trg");
-				
-				if(cmd.hasOption("i")) {
+
+				if (cmd.hasOption("i")) {
 					iMAX = Integer.parseInt(cmd.getOptionValue("i"));
 				}
 				
+				if (cmd.hasOption("th")) {
+					CONF_THRESHOLD = (float) Math.log(Double.parseDouble(cmd.getOptionValue("th")));
+				}
+
 			} else {
 				System.out.println("Missing required argumetns!");
 				printHelp(options);
@@ -197,7 +209,7 @@ public class InvitationModel {
 			@Override
 			public void run() {
 
-				HashIntDoubleMap totals = HashIntDoubleMaps.newMutableMap();
+				HashIntFloatMap totals = HashIntFloatMaps.newMutableMap();
 
 				for (int sent = 0; sent < src.length; sent++) {
 
@@ -210,18 +222,18 @@ public class InvitationModel {
 						int tw = tsent[t];
 						for (int s = 0; s < ssent.length; s++) {
 							int sw = ssent[s];
-							ttable.increas(tw, sw, 1d);
-							totals.addValue(sw, 1d, 1d);
+							ttable.increas(tw, sw, 1f);
+							totals.addValue(sw, 1f, 1f);
 						}
 					}
 				}
 
 				// normalizing and smoothing
 				for (int tw : ttable.ttable.keySet()) {
-					HashIntDoubleMap tMap = ttable.ttable.get(tw);
+					HashIntFloatMap tMap = ttable.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						double prob = (ttable.get(tw, sw) + n)
-								/ (totals.get(sw) + n * V);
+						float prob = (float) (Math.log(ttable.get(tw, sw) + n) - Math
+								.log(totals.get(sw) + nV));
 						ttable.put(tw, sw, prob);
 					}
 				}
@@ -235,19 +247,18 @@ public class InvitationModel {
 
 	}
 
-	@SuppressWarnings("unchecked")
 	public static void createLM() throws InterruptedException {
 
 		log.info("Creating Language Models ...");
-
-		lm = new NgramLanguageModel[4];
-
+		
+		lm = new float[4][];
+		
 		latch = new CountDownLatch(4);
 
-		createLM(IN + "." + SRC + ".encoded", lm, 0);
-		createLM(IN + "." + TRG + ".encoded", lm, 1);
-		createLM("outdomain." + SRC + ".encoded", lm, 2);
-		createLM("outdomain." + TRG + ".encoded", lm, 3);
+		createLM(IN + "." + SRC + ".encoded", lm, 0, src_mixdomain);
+		createLM(IN + "." + TRG + ".encoded", lm, 1, trg_mixdomain);
+		createLM("outdomain." + SRC + ".encoded", lm, 2, src_mixdomain);
+		createLM("outdomain." + TRG + ".encoded", lm, 3, trg_mixdomain);
 
 		latch.await();
 
@@ -267,7 +278,7 @@ public class InvitationModel {
 
 			results = HashIntObjMaps.newMutableMap();
 
-			double sPD[][] = new double[2][src_mixdomain.length];
+			float sPD[][] = new float[2][src_mixdomain.length];
 
 			int split = (int) Math.ceil(src_mixdomain.length / 100000d);
 
@@ -281,21 +292,23 @@ public class InvitationModel {
 			}
 			latch.await();
 
-			double countPD[] = new double[2];
+			float countPD[] = new float[2];
+			countPD[0] = Float.NEGATIVE_INFINITY;
+			countPD[1] = Float.NEGATIVE_INFINITY;
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
 				if (ignore.containsKey(sent))
 					continue;
 
-				if (Double.isNaN(sPD[0][sent]) || Double.isNaN(sPD[1][sent])) {
+				if (Float.isNaN(sPD[0][sent]) || Float.isNaN(sPD[1][sent])) {
 					ignore.put(sent, sent);
 					log.info("Ignoring " + (sent + 1));
 					continue;
 				}
 
-				countPD[0] += sPD[0][sent];
-				countPD[1] += sPD[1][sent];
+				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 
 				results.put(sent, new Result(sent, sPD[0][sent]));
 
@@ -322,8 +335,10 @@ public class InvitationModel {
 
 		for (Result r : sortedResult) {
 
-			int ssent[] = src_mixdomain[r.sentenceNumber-1];
-			int tsent[] = trg_mixdomain[r.sentenceNumber-1];
+			int sentIndex = r.sentenceNumber - 1;
+
+			int ssent[] = src_mixdomain[sentIndex];
+			int tsent[] = trg_mixdomain[sentIndex];
 
 			out_score.println(r.sentenceNumber + "\t" + r.score);
 
@@ -363,6 +378,8 @@ public class InvitationModel {
 		log.info("Starting Invitation EM ...");
 
 		latch = new CountDownLatch(2);
+		ttable[2] = new TranslationTable();
+		ttable[3] = new TranslationTable();
 		initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
 		initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
 		latch.await();
@@ -371,63 +388,76 @@ public class InvitationModel {
 			log.info("Iteration " + i);
 			HashIntObjMap<Result> results = HashIntObjMaps.newMutableMap();
 
-			double sPD[][] = new double[2][src_mixdomain.length];
+			float sPD[][] = new float[2][src_mixdomain.length];
 
-			int split = (int) Math.ceil(src_mixdomain.length / 100000d);
+			int splits = 10;
+			int split_size = src_mixdomain.length / splits;
 
-			latch = new CountDownLatch(split);
-			for (int sent = 0; sent < src_mixdomain.length; sent += 100000) {
-				int end = sent + 100000;
-				if (end > src_mixdomain.length) {
+			latch = new CountDownLatch(splits);
+			for (int s=0;s<splits;s++) {
+				int start = s*split_size;
+				int end   = start + split_size;
+				if (s==(splits-1)) {
 					end = src_mixdomain.length;
 				}
-				calcualteScore(sent, end, sPD);
+				calcualteScore(start, end, sPD);
 			}
 			latch.await();
 
-			double countPD[] = new double[2];
+			float countPD[] = new float[2];
+			countPD[0] = Float.NEGATIVE_INFINITY;
+			countPD[1] = Float.NEGATIVE_INFINITY;
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
 				if (ignore.containsKey(sent))
 					continue;
 
-				if (Double.isNaN(sPD[0][sent]) || Double.isNaN(sPD[1][sent])) {
+				if (Float.isNaN(sPD[0][sent]) || Float.isNaN(sPD[1][sent])) {
 					ignore.put(sent, sent);
 					log.info("Ignoring " + (sent + 1));
 					continue;
 				}
 
-				countPD[0] += sPD[0][sent];
-				countPD[1] += sPD[1][sent];
+				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 
-				double srcP = getLMProb(lm[0], src_mixdomain[sent]);
-				double trgP = getLMProb(lm[1], trg_mixdomain[sent]);
-				results.put(sent, new Result(sent, sPD[1][sent], srcP * trgP));
+				float srcP = lm[0][sent];
+				float trgP = lm[1][sent];
+				results.put(sent, new Result(sent, sPD[1][sent], srcP + trgP));
 
 			}
 
+			float newPD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
+			float newPD0 = countPD[0] - logAdd(countPD[0], countPD[1]);
+
+			log.info("PD1 ~ PD0 " + Math.exp(newPD1) + " ~ " + Math.exp(newPD0));
+			
 			writeResult(i, results);
+			
+			if(i>1 && Math.abs(Math.exp(newPD1) - Math.exp(PD1)) < 0.001) {
+				log.info("Convergence threshold reached.");
+				break;
+			}
+			
+			PD1 = newPD1;
+			PD0 = newPD0;
 
-			latch = new CountDownLatch(4);
-			updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
-			updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
-			updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
-			updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);
-			latch.await();
+			if (i < iMAX) {
 
-			PD1 = countPD[1] / (countPD[0] + countPD[1]);
-			PD0 = 1 - PD1;
+				latch = new CountDownLatch(4);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);
+				latch.await();
+			}
 
-			// AlignmentCalculator.process(src_mixdomain, trg_mixdomain,
-			// ttable[0], ttable[1]);
-
-			log.info("PD1 ~ PD0 " + PD1 + " ~ " + PD0);
 		}
 	}
 
 	public static void calcualteScore(final int start, final int end,
-			final double sPD[][]) {
+			final float sPD[][]) {
 
 		jobs.execute(new Runnable() {
 
@@ -441,22 +471,18 @@ public class InvitationModel {
 					int ssent[] = src_mixdomain[sent];
 					int tsent[] = trg_mixdomain[sent];
 
-					double sProb[] = new double[4];
+					float sProb[] = new float[4];
 
 					sProb[0] = calculateProb(ssent, tsent, ttable[0]);
 					sProb[1] = calculateProb(tsent, ssent, ttable[1]);
 					sProb[2] = calculateProb(ssent, tsent, ttable[2]);
 					sProb[3] = calculateProb(tsent, ssent, ttable[3]);
 
-					double in_score = PD1
-							* (sProb[0] * getLMProb(lm[1], tsent) + sProb[1]
-									* getLMProb(lm[0], ssent));
-					double mix_score = PD0
-							* (sProb[2] * getLMProb(lm[3], tsent) + sProb[3]
-									* getLMProb(lm[2], ssent));
+					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
+					float mix_score = PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
 
-					sPD[1][sent] = in_score / (in_score + mix_score);
-					sPD[0][sent] = 1 - sPD[1][sent];
+					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
 
 				}
 				InvitationModel.latch.countDown();
@@ -466,7 +492,7 @@ public class InvitationModel {
 	}
 
 	public static void calcualteBurnInScore(final int start, final int end,
-			final double sPD[][]) {
+			final float sPD[][]) {
 
 		jobs.execute(new Runnable() {
 
@@ -480,18 +506,18 @@ public class InvitationModel {
 					int ssent[] = src_mixdomain[sent];
 					int tsent[] = trg_mixdomain[sent];
 
-					double sProb[] = new double[4];
+					float sProb[] = new float[4];
 
 					sProb[0] = calculateProb(ssent, tsent, ttable[0]);
 					sProb[1] = calculateProb(tsent, ssent, ttable[1]);
 					sProb[2] = calculateProb(ssent, tsent, ttable[2]);
 					sProb[3] = calculateProb(tsent, ssent, ttable[3]);
 
-					double in_score = PD1 * (sProb[0] + sProb[1]);
-					double mix_score = PD0 * (sProb[2] + sProb[3]);
+					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
+					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
-					sPD[1][sent] = in_score / (in_score + mix_score);
-					sPD[0][sent] = 1 - sPD[1][sent];
+					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
 
 				}
 				InvitationModel.latch.countDown();
@@ -514,8 +540,9 @@ public class InvitationModel {
 					PrintWriter output = new PrintWriter("output_"
 							+ iterationNumber + ".txt");
 					for (Result r : sortedResult) {
-						output.println(r.sentenceNumber + "\t" + r.score + "\t"
-								+ r.lm_score);
+						output.println(r.sentenceNumber + "\t"
+								+ Math.exp(r.score) + "\t"
+								+ Math.exp(r.lm_score));
 					}
 					output.close();
 				} catch (FileNotFoundException e) {
@@ -526,24 +553,23 @@ public class InvitationModel {
 
 	}
 
-	public static double calculateProb(final int ssent[], final int tsent[],
+	public static float calculateProb(final int ssent[], final int tsent[],
 			final TranslationTable ttable) {
-		double prob = 1d;
+		float prob = 0;
 		for (int t = 1; t < tsent.length; t++) {
 			int tw = tsent[t];
-			double sum = 0;
+			float sum = Float.NEGATIVE_INFINITY;
 			for (int s = 0; s < ssent.length; s++) {
 				int sw = ssent[s];
-				sum += ttable.get(tw, sw, p);
+				sum = logAdd(sum, ttable.get(tw, sw, p));
 			}
-			prob *= sum;
+			prob += sum;
 		}
 		return prob;
 	}
 
 	public static void updateTranslationTable(final int src[][],
-			final int trg[][], final TranslationTable ttable,
-			final double sPD[]) {
+			final int trg[][], final TranslationTable ttable, final float sPD[]) {
 
 		jobs.execute(new Runnable() {
 
@@ -552,7 +578,7 @@ public class InvitationModel {
 				log.info("Updating translation table ... ");
 
 				TranslationTable counts = new TranslationTable();
-				HashIntDoubleMap totals = HashIntDoubleMaps.newMutableMap();
+				HashIntFloatMap totals = HashIntFloatMaps.newMutableMap();
 
 				for (int sent = 0; sent < src.length; sent++) {
 
@@ -561,21 +587,24 @@ public class InvitationModel {
 
 					if (ignore.containsKey(sent))
 						continue;
+					
+					if(sPD[sent] < CONF_THRESHOLD) continue;
 
 					int ssent[] = src[sent];
 					int tsent[] = trg[sent];
 
-					HashIntDoubleMap s_total = HashIntDoubleMaps
-							.newMutableMap();
+					HashIntFloatMap s_total = HashIntFloatMaps.newMutableMap();
 
 					// calculating normalization
 					for (int t = 1; t < tsent.length; t++) {
 						int tw = tsent[t];
-						s_total.put(tw, 0);
 						for (int s = 0; s < ssent.length; s++) {
 							int sw = ssent[s];
-							s_total.addValue(tw, ttable.get(tw, sw, p),
-									ttable.get(tw, sw, p));
+							s_total.put(
+									tw,
+									logAdd(s_total.getOrDefault(tw,
+											Float.NEGATIVE_INFINITY), ttable
+											.get(tw, sw, p)));
 						}
 					}
 
@@ -584,25 +613,34 @@ public class InvitationModel {
 						int tw = tsent[t];
 						for (int s = 0; s < ssent.length; s++) {
 							int sw = ssent[s];
-							double in_count = sPD[sent]
-									* (ttable.get(tw, sw, p) / s_total.get(tw));
-							counts.increas(tw, sw, in_count);
-							totals.addValue(sw, in_count, in_count);
+							float in_count = sPD[sent]
+									+ (ttable.get(tw, sw, p) - s_total.get(tw));
+							counts.put(
+									tw,
+									sw,
+									logAdd(counts.get(tw, sw,
+											Float.NEGATIVE_INFINITY), in_count));
+							totals.put(
+									sw,
+									logAdd(totals.getOrDefault(sw,
+											Float.NEGATIVE_INFINITY), in_count));
 						}
 					}
+					
 				}
 
 				// maximization
 				for (int tw : counts.ttable.keySet()) {
-					HashIntDoubleMap tMap = counts.ttable.get(tw);
+					HashIntFloatMap tMap = counts.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						double newProb = counts.get(tw, sw) / totals.get(sw);
+						float newProb = counts.get(tw, sw) - totals.get(sw);
 						ttable.put(tw, sw, newProb);
 					}
 				}
 				log.info("Updating translation table DONE");
 				InvitationModel.latch.countDown();
 			}
+
 		});
 
 	}
@@ -716,16 +754,16 @@ public class InvitationModel {
 
 	}
 
-	public static double getLMProb(NgramLanguageModel<String> lm, int sent[]) {
+	public static float getLMProb(NgramLanguageModel<String> lm, int sent[]) {
 		List<String> words = new ArrayList<String>();
 		for (int i = 1; i < sent.length; i++) {
 			words.add("" + sent[i]);
 		}
-		return Math.pow(10, lm.getLogProb(words));
+		return lm.getLogProb(words);
 	}
 
-	public static void createLM(final String fileName,
-			final NgramLanguageModel<String> lm[], final int index) {
+	public static void createLM(final String fileName, final float lm[][],
+			final int index, final int corpus[][]) {
 
 		jobs.execute(new Runnable() {
 
@@ -733,6 +771,7 @@ public class InvitationModel {
 			public void run() {
 				log.info("Creating language model");
 
+				NgramLanguageModel<String> createdLM = null;
 				final int lmOrder = 4;
 				final List<String> inputFiles = new ArrayList<String>();
 				inputFiles.add(fileName);
@@ -741,10 +780,17 @@ public class InvitationModel {
 				wordIndexer.setEndSymbol(ArpaLmReader.END_SYMBOL);
 				wordIndexer.setUnkSymbol(ArpaLmReader.UNK_SYMBOL);
 
-				lm[index] = LmReaders
+				createdLM = LmReaders
 						.readContextEncodedKneserNeyLmFromTextFile(inputFiles,
 								wordIndexer, lmOrder, new ConfigOptions(),
 								new File(fileName + ".lm"));
+
+				lm[index] = new float[corpus.length];
+				
+				for (int i = 0; i < corpus.length; i++) {
+					int sent[] = corpus[i];
+					lm[index][i] = getLMProb(createdLM, sent);
+				}
 
 				log.info(".");
 
@@ -754,20 +800,38 @@ public class InvitationModel {
 		});
 	}
 
+	public static float logAdd(float a, float b) {
+		float max, negDiff;
+		if (a > b) {
+			max = a;
+			negDiff = b - a;
+		} else {
+			max = b;
+			negDiff = a - b;
+		}
+		if (max == Float.NEGATIVE_INFINITY) {
+			return max;
+		} else if (negDiff < -20.0f) {
+			return max;
+		} else {
+			return max + (float) Math.log(1.0 + Math.exp(negDiff));
+		}
+	}
+
 }
 
 class Result implements Comparable<Result> {
 
 	int sentenceNumber;
-	double score = 1;
-	double lm_score = 1;
+	float score = 1;
+	float lm_score = 1;
 
-	public Result(int sentenceNumber, double score) {
+	public Result(int sentenceNumber, float score) {
 		this.sentenceNumber = sentenceNumber + 1;
 		this.score = score;
 	}
 
-	public Result(int sentenceNumber, double score, double lm_score) {
+	public Result(int sentenceNumber, float score, float lm_score) {
 		this.sentenceNumber = sentenceNumber + 1;
 		this.score = score;
 		this.lm_score = lm_score;
@@ -775,9 +839,9 @@ class Result implements Comparable<Result> {
 
 	@Override
 	public int compareTo(Result result) {
-		int cmp = Double.compare(result.score, this.score);
+		int cmp = Float.compare(result.score, this.score);
 		if (cmp == 0) {
-			cmp = Double.compare(result.lm_score, this.lm_score);
+			cmp = Float.compare(result.lm_score, this.lm_score);
 		}
 		return cmp;
 	}

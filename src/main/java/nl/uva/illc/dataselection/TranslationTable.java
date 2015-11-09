@@ -18,14 +18,14 @@
 
 package nl.uva.illc.dataselection;
 
-import net.openhft.koloboke.collect.map.hash.HashIntDoubleMap;
-import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
+import net.openhft.koloboke.collect.map.hash.HashIntFloatMap;
+import net.openhft.koloboke.collect.map.hash.HashIntFloatMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMap;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 
 public class TranslationTable {
 
-	public HashIntObjMap<HashIntDoubleMap> ttable = null;
+	public HashIntObjMap<HashIntFloatMap> ttable = null;
 
 	public TranslationTable() {
 		ttable = HashIntObjMaps.newMutableMap();
@@ -36,41 +36,41 @@ public class TranslationTable {
 		this.ttable.putAll(toCopy.ttable);
 	}
 
-	public void put(int tw, int sw, double value) {
-		HashIntDoubleMap tMap = ttable.get(tw);
+	public void put(int tw, int sw, float value) {
+		HashIntFloatMap tMap = ttable.get(tw);
 		if (tMap == null) {
-			tMap = HashIntDoubleMaps.newMutableMap();
+			tMap = HashIntFloatMaps.newMutableMap();
 			ttable.put(tw, tMap);
 		}
 		tMap.put(sw, value);
 	}
 
-	public void increas(int tw, int sw, double value) {
-		HashIntDoubleMap tMap = ttable.get(tw);
+	public void increas(int tw, int sw, float value) {
+		HashIntFloatMap tMap = ttable.get(tw);
 		if (tMap == null) {
-			tMap = HashIntDoubleMaps.newMutableMap();
+			tMap = HashIntFloatMaps.newMutableMap();
 			ttable.put(tw, tMap);
 		}
 		tMap.addValue(sw, value, value);
 	}
 
-	public double get(int tw, int sw) {
-		HashIntDoubleMap tMap = ttable.get(tw);
+	public float get(int tw, int sw) {
+		HashIntFloatMap tMap = ttable.get(tw);
 		if (tMap != null) {
 			if (tMap.containsKey(sw)) {
 				return tMap.get(sw);
 			}
 		}
-		return -1;
+		return Float.NaN;
 	}
 
-	public double get(int tw, int sw, double d) {
-		double value = get(tw, sw);
-		return value == -1 ? d : value;
+	public float get(int tw, int sw, float d) {
+		float value = get(tw, sw);
+		return Float.isNaN(value) ? d : value;
 	}
 
 	public void remove(int tw, int sw) {
-		HashIntDoubleMap tMap = ttable.get(tw);
+		HashIntFloatMap tMap = ttable.get(tw);
 		if (tMap != null) {
 			tMap.remove(sw);
 		}
@@ -78,8 +78,8 @@ public class TranslationTable {
 
 	public void normalize() {
 		for (int tw : ttable.keySet()) {
-			HashIntDoubleMap tMap = ttable.get(tw);
-			double sum = 0;
+			HashIntFloatMap tMap = ttable.get(tw);
+			float sum = 0;
 			for (int sw : tMap.keySet()) {
 				sum += tMap.get(sw);
 			}
@@ -93,11 +93,11 @@ public class TranslationTable {
 		int alignments[] = new int[tsent.length];
 		for (int t = 1; t < tsent.length; t++) {
 			int tw = tsent[t];
-			double max_p = 0d;
+			float max_p = 0f;
 			int ind = -1;
 			for (int s = 0; s < ssent.length; s++) {
 				int sw = ssent[s];
-				double p = this.get(tw, sw, 0d);
+				float p = this.get(tw, sw, 0f);
 				if (p >= max_p) {
 					max_p = p;
 					ind = s;
