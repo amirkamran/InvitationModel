@@ -110,7 +110,7 @@ public class InvitationModel {
 	
 	// default convergence threshold: How much change in PD1 is significant
 	// to continue to next iteration
-	static float CONV_THRESHOLD = 0.00001f;
+	static float CONV_THRESHOLD = 0f;
 	
 
 	static float PD1 = LOG_0_5;
@@ -123,10 +123,10 @@ public class InvitationModel {
 
 	public static HashIntIntMap ignore = HashIntIntMaps.newMutableMap();
 
-	public static float n = 0.5f;
-	public static float V = 500000f;
-	public static float nV = n * V;
-	public static float p = -(float) Math.log(V);
+	public static float n = (float)Math.log(0.3);
+	public static float V = (float)Math.log(1000000);
+	public static float nV = n + V;
+	public static float p = - nV;
 
 	public static void main(String args[]) throws IOException,
 			InterruptedException {
@@ -203,12 +203,12 @@ public class InvitationModel {
 			ttable[i] = new TranslationTable();
 		}
 
-		latch = new CountDownLatch(4);
+		latch = new CountDownLatch(2);
 
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);
-		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
-		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
+		//initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		//initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 
 		latch.await();
 
@@ -246,8 +246,7 @@ public class InvitationModel {
 				for (int tw : ttable.ttable.keySet()) {
 					HashIntFloatMap tMap = ttable.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						float prob = (float) (Math.log(ttable.get(tw, sw) + n) - Math
-								.log(totals.get(sw) + nV));
+						float prob = logAdd((float)Math.log(ttable.get(tw, sw)), n) - logAdd((float)Math.log(totals.get(sw)), nV);						
 						ttable.put(tw, sw, prob);
 					}
 				}
@@ -306,9 +305,9 @@ public class InvitationModel {
 			}
 			latch.await();
 
-			float countPD[] = new float[2];
-			countPD[0] = Float.NEGATIVE_INFINITY;
-			countPD[1] = Float.NEGATIVE_INFINITY;
+			//float countPD[] = new float[2];
+			//countPD[0] = Float.NEGATIVE_INFINITY;
+			//countPD[1] = Float.NEGATIVE_INFINITY;
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
@@ -321,68 +320,22 @@ public class InvitationModel {
 					continue;
 				}
 
-				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
-				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
+				//countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				//countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 
 				results.put(sent, new Result(sent, sPD[0][sent]));
 
 			}
 
 		}
-
-		log.info("BurnIN DONE");
-
-		log.info("Writing outdomain corpus ... ");
-
+		
+		latch = new CountDownLatch(1);
 		ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 		Collections.sort(sortedResult);
-
-		PrintWriter src_out = new PrintWriter("outdomain." + SRC + ".encoded");
-		PrintWriter trg_out = new PrintWriter("outdomain." + TRG + ".encoded");
-
-		PrintWriter out_score = new PrintWriter("outdomain.scores");
-
-		src_outdomain = new int[src_indomain.length][];
-		trg_outdomain = new int[trg_indomain.length][];
-
-		int j = 0;
-
-		for (Result r : sortedResult) {
-
-			int sentIndex = r.sentenceNumber - 1;
-
-			int ssent[] = src_mixdomain[sentIndex];
-			int tsent[] = trg_mixdomain[sentIndex];
-
-			out_score.println(r.sentenceNumber + "\t" + r.score);
-
-			src_outdomain[j] = ssent;
-			trg_outdomain[j] = tsent;
-
-			for (int w = 1; w < ssent.length; w++) {
-				src_out.print(ssent[w]);
-				src_out.print(" ");
-			}
-			src_out.println();
-			for (int w = 1; w < tsent.length; w++) {
-				trg_out.print(tsent[w]);
-				trg_out.print(" ");
-			}
-			trg_out.println();
-
-			j++;
-
-			if (j == src_indomain.length) {
-				break;
-			}
-		}
-
-		out_score.close();
-
-		src_out.close();
-		trg_out.close();
-
-		log.info("DONE");
+		writeOutdomain(sortedResult);
+		latch.await();
+		
+		log.info("BurnIN DONE");
 
 	}
 
@@ -391,9 +344,13 @@ public class InvitationModel {
 
 		log.info("Starting Invitation EM ...");
 
-		latch = new CountDownLatch(2);
+		latch = new CountDownLatch(4);
+		ttable[0] = new TranslationTable();
+		ttable[1] = new TranslationTable();				
 		ttable[2] = new TranslationTable();
 		ttable[3] = new TranslationTable();
+		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
+		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
 		initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
 		initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
 		latch.await();
@@ -404,7 +361,7 @@ public class InvitationModel {
 
 			float sPD[][] = new float[2][src_mixdomain.length];
 
-			int splits = 10;
+			int splits = 20;
 			int split_size = src_mixdomain.length / splits;
 
 			latch = new CountDownLatch(splits);
@@ -449,7 +406,7 @@ public class InvitationModel {
 			
 			writeResult(i, results);
 			
-			if(i>1 && Math.abs(Math.exp(newPD1) - Math.exp(PD1)) <= CONV_THRESHOLD) {
+			if(i>1 && CONV_THRESHOLD!=0 && Math.abs(Math.exp(newPD1) - Math.exp(PD1)) <= CONV_THRESHOLD) {
 				log.info("Convergence threshold reached.");
 				break;
 			}
@@ -466,6 +423,32 @@ public class InvitationModel {
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);
 				latch.await();
 			}
+			
+			// Reinitialize the language models and translation tables
+			
+			/*if(i==1) {
+				latch = new CountDownLatch(1);
+				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
+				Collections.sort(sortedResult);	
+				Collections.reverse(sortedResult);
+				writeOutdomain(sortedResult);
+				latch.await();
+				latch = new CountDownLatch(4);
+				ttable[0] = new TranslationTable();
+				ttable[1] = new TranslationTable();				
+				ttable[2] = new TranslationTable();
+				ttable[3] = new TranslationTable();
+				initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
+				initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);				
+				initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
+				initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
+				createLM("outdomain." + SRC + ".encoded", lm, 2, src_mixdomain);
+				createLM("outdomain." + TRG + ".encoded", lm, 3, trg_mixdomain);				
+				latch.await();
+				
+				PD1 = LOG_0_5;
+				PD0 = LOG_0_5;
+			}*/
 
 		}
 	}
@@ -539,6 +522,73 @@ public class InvitationModel {
 		});
 
 	}
+	
+	public static void writeOutdomain(final ArrayList<Result> results) {
+		
+		jobs.execute(new Runnable() {
+
+			@Override
+			public void run() {
+				log.info("Writing outdomain corpus ... ");
+
+				PrintWriter src_out;
+				PrintWriter trg_out;
+				PrintWriter out_score;
+				
+				try {
+					src_out = new PrintWriter("outdomain." + SRC + ".encoded");
+					trg_out = new PrintWriter("outdomain." + TRG + ".encoded");
+					out_score = new PrintWriter("outdomain.scores");
+					src_outdomain = new int[src_indomain.length][];
+					trg_outdomain = new int[trg_indomain.length][];
+
+					int j = 0;
+	
+					for (Result r : results) {
+	
+						int sentIndex = r.sentenceNumber - 1;
+	
+						int ssent[] = src_mixdomain[sentIndex];
+						int tsent[] = trg_mixdomain[sentIndex];
+	
+						out_score.println(r.sentenceNumber + "\t" + r.score);
+	
+						src_outdomain[j] = ssent;
+						trg_outdomain[j] = tsent;
+	
+						for (int w = 1; w < ssent.length; w++) {
+							src_out.print(ssent[w]);
+							src_out.print(" ");
+						}
+						src_out.println();
+						for (int w = 1; w < tsent.length; w++) {
+							trg_out.print(tsent[w]);
+							trg_out.print(" ");
+						}
+						trg_out.println();
+	
+						j++;
+	
+						if (j == src_indomain.length) {
+							break;
+						}
+					}
+	
+					out_score.close();
+	
+					src_out.close();
+					trg_out.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}				
+
+				InvitationModel.latch.countDown();
+				log.info("DONE");				
+			}
+			
+		});
+		
+	}
 
 	public static void writeResult(final int iterationNumber,
 			final HashIntObjMap<Result> results) {
@@ -547,12 +597,10 @@ public class InvitationModel {
 
 			@Override
 			public void run() {
-				ArrayList<Result> sortedResult = new ArrayList<Result>(results
-						.values());
+				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 				Collections.sort(sortedResult);
 				try {
-					PrintWriter output = new PrintWriter("output_"
-							+ iterationNumber + ".txt");
+					PrintWriter output = new PrintWriter("output_" + iterationNumber + ".txt");
 					for (Result r : sortedResult) {
 						output.println(r.sentenceNumber + "\t"
 								+ Math.exp(r.score) + "\t"

@@ -9,11 +9,20 @@
 	<description>Implementation of domain adaptation algorithm based on the paper "Latent Domain Translation Models in Mix-of-Domains Haystack" http://www.aclweb.org/anthology/C14-1182</description>
 	<packaging>jar</packaging>
 
+	<repositories>
+  		<repository>
+    		<id>project.local.repo</id>
+    		<name>invitationmodel-repo</name>
+    		<url>file:${project.basedir}/lib</url>
+  		</repository>
+	</repositories>	
+
+
 	<dependencies>
 		<dependency>
 			<groupId>edu.berkeley.nlp</groupId>
 			<artifactId>berkeleylm</artifactId>
-			<version>1.1.2</version>
+			<version>1.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-cli</groupId>
