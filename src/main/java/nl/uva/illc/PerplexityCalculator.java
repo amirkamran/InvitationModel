@@ -42,15 +42,17 @@ public class PerplexityCalculator {
 		
 		int files = Integer.parseInt(args[0]);
 		String lang = args[1];
+		long tokens = Long.parseLong(args[2]);
+		int splits = Integer.parseInt(args[3]);
 		
-		perp = new double[files][19];
+		perp = new double[files][splits];
 		
 		new File("./temp").mkdir();
 		
 		latch = new CountDownLatch(files*perp[0].length);
 		for(int i=1;i<=perp.length;i++) {
 			String fileName = "selected" + i + "." + lang;
-			Future f1 = splitFile(fileName, 100000);
+			Future f1 = splitFile(fileName, tokens, perp[0].length);
 			for(int j=1;j<=perp[i-1].length;j++) {
 				Future f2 = runCommand("./ngram-count -order 5 -interpolate -kndiscount3 -kndiscount5 -lm ./temp/" + fileName+"."+j+".lm -text ./temp/" + fileName+"."+j , f1);
 				Future f3 = runCommand("./ngram -lm ./temp/" + fileName+"."+j +".lm -ppl ./test." + lang + " > ./temp/" + fileName+"."+j + ".ppl", f2);
@@ -93,7 +95,7 @@ public class PerplexityCalculator {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	public static Future splitFile(final String fileName, final int splitSize) {
+	public static Future splitFile(final String fileName, final long tokens, final int splits) {
 		return jobs.submit(new Runnable() {			
 			@Override
 			public void run() {
@@ -101,16 +103,20 @@ public class PerplexityCalculator {
 					
 					System.out.println("Spliting file . . . " + fileName);
 					
+					long splitSize = tokens / splits;
+					
 					BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), "UTF8"));					
 					String line = null;
 					int i = 1;
 					int s = 1;
 					PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + i), "UTF8"));			
 					while((line=reader.readLine())!=null) {
+						s += line.split("\\s+").length;
 						out.println(line);
-						if(++s >= splitSize) {
-							s = 1;
+						if(s >= splitSize) {
+							s = 1;							
 							out.close();
+							if(i==splits+1) break;
 							out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + ++i), "UTF8"));
 						}
 					}
