@@ -441,8 +441,8 @@ public class InvitationModel {
 				updateTranslationTable(src_mixdomain, trg_mixdomain, src_indomain, trg_indomain, ttable[0], sPD[1], (float)Math.log(1));
 				updateTranslationTable(trg_mixdomain, src_mixdomain, trg_indomain, src_indomain, ttable[1], sPD[1], (float)Math.log(1));
 
-				updateTranslationTable(src_mixdomain, trg_mixdomain, src_indomain, trg_indomain, ttable[2], sPD[0], p);
-				updateTranslationTable(trg_mixdomain, src_mixdomain, trg_indomain, src_indomain, ttable[3], sPD[0], p);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);
 				latch.await();
 			}
 			
