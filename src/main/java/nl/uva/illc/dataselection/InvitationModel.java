@@ -282,8 +282,8 @@ public class InvitationModel {
 
 		createLM(IN + "." + SRC + ".encoded", lm, 0, src_mixdomain);
 		createLM(IN + "." + TRG + ".encoded", lm, 1, trg_mixdomain);
-		//createLM("outdomain." + SRC + ".encoded", lm, 2, src_mixdomain);
-		//createLM("outdomain." + TRG + ".encoded", lm, 3, trg_mixdomain);
+		createLM("outdomain." + SRC + ".encoded", lm, 2, src_mixdomain);
+		createLM("outdomain." + TRG + ".encoded", lm, 3, trg_mixdomain);
 
 		latch.await();
 
