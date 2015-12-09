@@ -219,8 +219,8 @@ public class InvitationModel {
 
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);
-		//initializeTranslationTable(src_mixdomain, trg_mixdomaain, ttable[2]);
-		//initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
+		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 
 		latch.await();
 
