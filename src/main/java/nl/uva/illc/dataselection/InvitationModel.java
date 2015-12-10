@@ -372,8 +372,8 @@ public class InvitationModel {
 		latch = new CountDownLatch(4);
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
-		initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
-		initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
+		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 		latch.await();
 
 		for (int i = 1; i <= iMAX; i++) {
@@ -447,7 +447,7 @@ public class InvitationModel {
 			
 			// Reinitialize the language models and translation tables
 			
-			/*if(i==1) {
+			if(i==1) {
 				latch = new CountDownLatch(1);
 				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 				Collections.sort(sortedResult);	
@@ -461,15 +461,15 @@ public class InvitationModel {
 				ttable[3] = new TranslationTable();
 				initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 				initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);				
-				initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
-				initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
+				initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+				initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 				createLM("outdomain." + SRC + ".encoded", lm, 2, src_mixdomain);
 				createLM("outdomain." + TRG + ".encoded", lm, 3, trg_mixdomain);				
 				latch.await();
 				
 				PD1 = LOG_0_5;
 				PD0 = LOG_0_5;
-			}*/
+			}
 
 		}
 	}
