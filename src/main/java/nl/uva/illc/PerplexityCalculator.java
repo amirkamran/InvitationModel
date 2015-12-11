@@ -34,9 +34,7 @@ public class PerplexityCalculator {
 	
 	public static ExecutorService jobs = Executors.newFixedThreadPool(20);
 	public static CountDownLatch latch = null;
-	
-	public static double [][]perp = null;
-	
+		
 	@SuppressWarnings("rawtypes")
 	public static void main(String args[]) throws InterruptedException {
 		
@@ -45,36 +43,40 @@ public class PerplexityCalculator {
 		String trg = args[2];
 		long tokens = Long.parseLong(args[3]);
 		int splits = Integer.parseInt(args[4]);
-		
-		perp = new double[files][splits];
+	
+		double [][]src_perp = null;
+		double [][]trg_perp = null;
+
+		src_perp = new double[files][splits];
+		trg_perp = new double[files][splits];
 		
 		new File("./temp").mkdir();
 		
 		latch = new CountDownLatch(2*files*splits);
 		for(int i=1;i<=files;i++) {
 			String fileName = "selected" + i;
-			Future f1 = splitFile(fileName, src, trg, tokens, perp[0].length);
+			Future f1 = splitFile(fileName, src, trg, tokens, splits);
 			for(int j=1;j<=splits;j++) {
 				Future f2 = runCommand("./ngram-count -order 5 -interpolate -kndiscount3 -kndiscount5 -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
 				Future f3 = runCommand("./ngram -lm ./temp/" + fileName+"."+src+"."+j +".lm -ppl ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
 				Future f4 = runCommand("./ngram-count -order 5 -interpolate -kndiscount3 -kndiscount5 -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
 				Future f5 = runCommand("./ngram -lm ./temp/" + fileName+"."+trg+"."+j +".lm -ppl ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);				
-				readPpl("./temp/" + fileName+"."+src+"."+j + ".ppl", i-1, j-1, f3);
-				readPpl("./temp/" + fileName+"."+trg+"."+j + ".ppl", i-1, j-1, f5);
+				readPpl(src_perp, "./temp/" + fileName+"."+src+"."+j + ".ppl", i-1, j-1, f3);
+				readPpl(trg_perp, "./temp/" + fileName+"."+trg+"."+j + ".ppl", i-1, j-1, f5);
 			}
 		}
 		latch.await();
 		jobs.shutdown();
-		for(int i=0;i<perp.length;i++) {
-			for(int j=0;j<perp[i].length;j++) {
-				System.out.print(perp[i][j] + "\t");
+		for(int i=0;i<files;i++) {
+			for(int j=0;j<splits;j++) {
+				System.out.print(Math.sqrt(src_perp[i][j]*trg_perp[i][j]) + "\t");
 			}
 			System.out.println();
 		}
 	}
 	
 	@SuppressWarnings("rawtypes")
-	public static void readPpl(final String fileName, final int fileNumber, final int splitNumber, final Future future) {
+	public static void readPpl(final double [][]perp, final String fileName, final int fileNumber, final int splitNumber, final Future future) {
 		jobs.submit(new Runnable() {
 			
 			@Override
