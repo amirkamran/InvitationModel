@@ -91,7 +91,7 @@ public class PerplexityCalculator {
 					BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), "UTF8"));
 					reader.readLine();
 					String line = reader.readLine();						
-					String value = line.substring(line.indexOf("ppl= ")+5, line.indexOf(" ppl1")-1);
+					String value = line.split("\\s+")[5];
 					perp[fileNumber][splitNumber] = Double.parseDouble(value);
 					PerplexityCalculator.latch.countDown();
 					reader.close();
