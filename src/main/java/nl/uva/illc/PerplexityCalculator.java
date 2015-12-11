@@ -42,9 +42,9 @@ public class PerplexityCalculator {
 		
 		int files = Integer.parseInt(args[0]);
 		String src = args[1];
-		String trg = args[1];
-		long tokens = Long.parseLong(args[2]);
-		int splits = Integer.parseInt(args[3]);
+		String trg = args[2];
+		long tokens = Long.parseLong(args[3]);
+		int splits = Integer.parseInt(args[4]);
 		
 		perp = new double[files][splits];
 		
