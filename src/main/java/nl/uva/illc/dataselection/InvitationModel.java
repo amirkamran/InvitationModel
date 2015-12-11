@@ -972,6 +972,9 @@ public class InvitationModel {
 					//throw new RuntimeException(e);
 				}
 
+				log.info("checking random language model score " + lm[index][0]);
+				log.info("checking random language model score " + lm[index][1899999]);
+				
 				log.info(".");
 
 				InvitationModel.latch.countDown();
