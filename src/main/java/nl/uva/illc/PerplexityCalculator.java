@@ -41,7 +41,8 @@ public class PerplexityCalculator {
 	public static void main(String args[]) throws InterruptedException {
 		
 		int files = Integer.parseInt(args[0]);
-		String lang = args[1];
+		String src = args[1];
+		String trg = args[1];
 		long tokens = Long.parseLong(args[2]);
 		int splits = Integer.parseInt(args[3]);
 		
@@ -49,14 +50,17 @@ public class PerplexityCalculator {
 		
 		new File("./temp").mkdir();
 		
-		latch = new CountDownLatch(files*perp[0].length);
-		for(int i=1;i<=perp.length;i++) {
-			String fileName = "selected" + i + "." + lang;
-			Future f1 = splitFile(fileName, tokens, perp[0].length);
-			for(int j=1;j<=perp[i-1].length;j++) {
-				Future f2 = runCommand("./ngram-count -order 5 -interpolate -kndiscount3 -kndiscount5 -lm ./temp/" + fileName+"."+j+".lm -text ./temp/" + fileName+"."+j , f1);
-				Future f3 = runCommand("./ngram -lm ./temp/" + fileName+"."+j +".lm -ppl ./test." + lang + " > ./temp/" + fileName+"."+j + ".ppl", f2);
-				readPpl("./temp/" + fileName+"."+j + ".ppl", i-1, j-1, f3);
+		latch = new CountDownLatch(2*files*splits);
+		for(int i=1;i<=files;i++) {
+			String fileName = "selected" + i;
+			Future f1 = splitFile(fileName, src, trg, tokens, perp[0].length);
+			for(int j=1;j<=splits;j++) {
+				Future f2 = runCommand("./ngram-count -order 5 -interpolate -kndiscount3 -kndiscount5 -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
+				Future f3 = runCommand("./ngram -lm ./temp/" + fileName+"."+src+"."+j +".lm -ppl ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
+				Future f4 = runCommand("./ngram-count -order 5 -interpolate -kndiscount3 -kndiscount5 -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
+				Future f5 = runCommand("./ngram -lm ./temp/" + fileName+"."+trg+"."+j +".lm -ppl ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);				
+				readPpl("./temp/" + fileName+"."+src+"."+j + ".ppl", i-1, j-1, f3);
+				readPpl("./temp/" + fileName+"."+trg+"."+j + ".ppl", i-1, j-1, f5);
 			}
 		}
 		latch.await();
@@ -95,7 +99,7 @@ public class PerplexityCalculator {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	public static Future splitFile(final String fileName, final long tokens, final int splits) {
+	public static Future splitFile(final String fileName, final String src, final String trg, final long tokens, final int splits) {
 		return jobs.submit(new Runnable() {			
 			@Override
 			public void run() {
@@ -104,24 +108,33 @@ public class PerplexityCalculator {
 					System.out.println("Spliting file . . . " + fileName);
 					
 					long splitSize = tokens / splits;
-					
-					BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), "UTF8"));					
+
+					BufferedReader src_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + src), "UTF8"));
+					BufferedReader trg_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + trg), "UTF8"));
 					String line = null;
 					int i = 1;
 					int s = 1;
-					PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + i), "UTF8"));			
-					while((line=reader.readLine())!=null) {
-						s += line.split("\\s+").length;
-						out.println(line);
-						if(s >= splitSize) {
-							s = 1;							
-							out.close();
-							if(i==splits+1) break;
-							out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + ++i), "UTF8"));
+					PrintWriter src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + i), "UTF8"));
+					PrintWriter trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + i), "UTF8"));
+					try{
+						while((line=src_reader.readLine())!=null) {
+							s += line.split("\\s+").length;
+							src_out.println(line);
+							trg_out.println(trg_reader.readLine());
+							if(s >= splitSize && i<splits) {
+								s = 1;							
+								src_out.close();
+								trg_out.close();
+								i++;
+								src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + i), "UTF8"));
+								trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + i), "UTF8"));
+							}
 						}
-					}
-					out.close();
-					reader.close();
+					}catch(Exception e){}
+					src_out.close();
+					trg_out.close();
+					src_reader.close();
+					trg_reader.close();
 				} catch (Exception e) {
 					e.printStackTrace();
 					System.exit(1);
