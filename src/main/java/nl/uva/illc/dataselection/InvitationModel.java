@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import net.openhft.koloboke.collect.map.hash.HashIntFloatMap;
@@ -88,6 +89,7 @@ public class InvitationModel {
 	static String MIX = null;
 	static String SRC = null;
 	static String TRG = null;
+	static String OUT = "outdomain";
 
 	static int iMAX = 10;
 
@@ -282,8 +284,8 @@ public class InvitationModel {
 
 		createLM(IN + "." + SRC + ".encoded", lm, 0, src_mixdomain);
 		createLM(IN + "." + TRG + ".encoded", lm, 1, trg_mixdomain);
-		createLM("outdomain." + SRC + ".encoded", lm, 2, src_mixdomain);
-		createLM("outdomain." + TRG + ".encoded", lm, 3, trg_mixdomain);
+		createLM(OUT + SRC + ".encoded", lm, 2, src_mixdomain);
+		createLM(OUT + TRG + ".encoded", lm, 3, trg_mixdomain);
 
 		latch.await();
 
@@ -917,7 +919,7 @@ public class InvitationModel {
 			public void run() {
 				log.info("Creating language model");
 
-				NgramLanguageModel<String> createdLM = null;
+				/*NgramLanguageModel<String> createdLM = null;
 				final int lmOrder = 4;
 				final List<String> inputFiles = new ArrayList<String>();
 				inputFiles.add(fileName);
@@ -936,6 +938,30 @@ public class InvitationModel {
 				for (int i = 0; i < corpus.length; i++) {
 					int sent[] = corpus[i];
 					lm[index][i] = getLMProb(createdLM, sent);
+				}*/
+				
+				String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
+				
+				runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + fileName + ".1cnt");
+				runCommand("awk '$2 > 1' " + fileName + ".1cnt | cut -f1 | sort > " + fileName + ".vocab");
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + fileName + ".vocab -lm " + fileName + ".lm.gz");
+				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $6}' | head -n -1 > " + mixFileName + ".ppl");
+				
+				try {
+					BufferedReader reader = new BufferedReader(
+							new InputStreamReader(
+									new FileInputStream(mixFileName + ".ppl"), Charset
+											.forName("UTF8")));
+					
+					String line = null;
+					int i = 0;
+					while((line=reader.readLine())!=null) {
+						lm[index][i++] = Float.parseFloat(line);
+					}
+					
+					reader.close();
+				} catch(Exception e) {
+					throw new RuntimeException(e);
 				}
 
 				log.info(".");
@@ -963,7 +989,33 @@ public class InvitationModel {
 			return max + (float) Math.log(1.0 + Math.exp(negDiff));
 		}
 	}
-
+	
+	public static void runCommand(String command) {
+		try { 
+			
+			System.out.println(command);
+			
+			String [] cmd = {"/bin/sh" , "-c", command};					
+	        Process p = Runtime.getRuntime().exec(cmd);
+	        p.waitFor();
+	        BufferedReader reader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+	        String line = "";
+	        while ((line = reader.readLine()) != null) {
+	        	System.out.println(line);
+	        }
+	        reader.close();
+	        reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+	        while ((line = reader.readLine()) != null) {
+	        	System.out.println(line);
+	        }
+	        reader.close();
+	        
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			System.exit(1);
+		}				
+    }
+    
 }
 
 class Result implements Comparable<Result> {
