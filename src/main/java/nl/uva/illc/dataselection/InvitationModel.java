@@ -954,6 +954,8 @@ public class InvitationModel {
 				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
 				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
 				
+				lm[index] = new float[corpus.length];
+				
 				BufferedReader reader = null;
 				try {
 					reader = new BufferedReader(
@@ -969,7 +971,7 @@ public class InvitationModel {
 					
 					reader.close();
 				} catch(Exception e) {
-					//throw new RuntimeException(e);
+					throw new RuntimeException(e);
 				}
 
 				log.info("checking random language model score " + lm[index][0]);
