@@ -21,10 +21,12 @@ package nl.uva.illc;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +38,7 @@ public class PerplexityCalculator {
 	public static CountDownLatch latch = null;
 		
 	@SuppressWarnings("rawtypes")
-	public static void main(String args[]) throws InterruptedException {
+	public static void main(String args[]) throws InterruptedException, UnsupportedEncodingException, FileNotFoundException {
 		
 		int files = Integer.parseInt(args[0]);
 		String src = args[1];
@@ -67,12 +69,14 @@ public class PerplexityCalculator {
 		}
 		latch.await();
 		jobs.shutdown();
+		PrintWriter ppl_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("ppl.txt"), "UTF8"));
 		for(int i=0;i<files;i++) {
 			for(int j=0;j<splits;j++) {
-				System.out.print(Math.sqrt(src_perp[i][j]*trg_perp[i][j]) + "\t");
+				ppl_out.print(Math.sqrt(src_perp[i][j]*trg_perp[i][j]) + "\t");
 			}
-			System.out.println();
+			ppl_out.println();
 		}
+		ppl_out.close();
 	}
 	
 	@SuppressWarnings("rawtypes")
