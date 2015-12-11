@@ -284,8 +284,8 @@ public class InvitationModel {
 
 		createLM(IN + "." + SRC + ".encoded", lm, 0, src_mixdomain);
 		createLM(IN + "." + TRG + ".encoded", lm, 1, trg_mixdomain);
-		createLM(OUT + SRC + ".encoded", lm, 2, src_mixdomain);
-		createLM(OUT + TRG + ".encoded", lm, 3, trg_mixdomain);
+		createLM(OUT + "." + SRC + ".encoded", lm, 2, src_mixdomain);
+		createLM(OUT + "." + TRG + ".encoded", lm, 3, trg_mixdomain);
 
 		latch.await();
 
@@ -465,8 +465,8 @@ public class InvitationModel {
 				initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);				
 				initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
 				initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
-				createLM("outdomain." + SRC + ".encoded", lm, 2, src_mixdomain);
-				createLM("outdomain." + TRG + ".encoded", lm, 3, trg_mixdomain);				
+				createLM(OUT + "." + SRC + ".encoded", lm, 2, src_mixdomain);
+				createLM(OUT + "." + TRG + ".encoded", lm, 3, trg_mixdomain);				
 				latch.await();
 				
 				PD1 = LOG_0_5;
@@ -559,9 +559,9 @@ public class InvitationModel {
 				PrintWriter out_score;
 				
 				try {
-					src_out = new PrintWriter("outdomain." + SRC + ".encoded");
-					trg_out = new PrintWriter("outdomain." + TRG + ".encoded");
-					out_score = new PrintWriter("outdomain.scores");
+					src_out = new PrintWriter(OUT + "." + SRC + ".encoded");
+					trg_out = new PrintWriter(OUT + "." + TRG + ".encoded");
+					out_score = new PrintWriter(OUT + ".scores");
 					
 					long outdomain_token_count = 0;
 					int outdomain_size = 0;
@@ -942,10 +942,10 @@ public class InvitationModel {
 				
 				String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
 				
-				runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + fileName + ".1cnt");
+				runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
 				runCommand("awk '$2 > 1' " + fileName + ".1cnt | cut -f1 | sort > " + fileName + ".vocab");
 				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + fileName + ".vocab -lm " + fileName + ".lm.gz");
-				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $6}' | head -n -1 > " + mixFileName + ".ppl");
+				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + mixFileName + ".ppl");
 				
 				try {
 					BufferedReader reader = new BufferedReader(
