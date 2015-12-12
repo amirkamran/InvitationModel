@@ -969,7 +969,7 @@ public class InvitationModel {
 					String line = null;
 					int i = 0;
 					while((line=reader.readLine())!=null) {
-						lm[index][i] = (float)Math.log(Float.parseFloat(line));
+						lm[index][i] = (float)Math.log(1/Float.parseFloat(line));
 						i++;
 					}
 					
