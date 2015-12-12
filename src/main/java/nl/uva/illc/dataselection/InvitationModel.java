@@ -141,9 +141,9 @@ public class InvitationModel {
 			processCommandLineArguments(args);
 			readFiles();
 			
-			V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
+			/*V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
 			nV = n + V;
-			p = - nV;
+			p = - nV;*/
 			
 			initialize();
 			burnIN();
