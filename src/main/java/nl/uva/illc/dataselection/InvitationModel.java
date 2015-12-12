@@ -951,8 +951,11 @@ public class InvitationModel {
 				
 				String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
 				
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
-				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
+				//runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
+				//runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
+				
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -lm " + fileName + ".lm.gz");
+				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");				
 				
 				lm[index] = new float[corpus.length];
 				
