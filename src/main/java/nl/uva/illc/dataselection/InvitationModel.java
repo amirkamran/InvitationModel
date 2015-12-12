@@ -955,7 +955,7 @@ public class InvitationModel {
 				//runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
 				
 				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -lm " + fileName + ".lm.gz");
-				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");				
+				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $6}' | head -n -1 > " + fileName + ".ppl");				
 				
 				lm[index] = new float[corpus.length];
 				
@@ -969,7 +969,7 @@ public class InvitationModel {
 					String line = null;
 					int i = 0;
 					while((line=reader.readLine())!=null) {
-						lm[index][i] = Float.parseFloat(line) - (float)Math.log(corpus[i].length);
+						lm[index][i] = (float)Math.log(Float.parseFloat(line));
 						i++;
 					}
 					
