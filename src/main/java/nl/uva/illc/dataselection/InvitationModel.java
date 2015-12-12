@@ -351,7 +351,7 @@ public class InvitationModel {
 				float srcT = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
 				float trgT = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);				
 				
-				results.put(sent, new Result(sent, sPD[0][sent], srcT + trgT));
+				results.put(sent, new Result(sent, sPD[0][sent], logAdd(srcT, trgT)));
 
 			}
 			
@@ -431,7 +431,7 @@ public class InvitationModel {
 				float trgP = lm[1][sent];
 				float srcT = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
 				float trgT = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);
-				results.put(sent, new Result(sent, sPD[1][sent], srcT + trgT));
+				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcT+trgP, trgT+srcP)));
 
 			}
 
@@ -609,7 +609,7 @@ public class InvitationModel {
 						
 						outdomain_token_count += ssent.length;
 	
-						out_score.println(r.sentenceNumber + "\t" + Math.exp(r.score));
+						out_score.println(r.sentenceNumber + "\t" + Math.exp(r.score) + "\t" + Math.exp(r.lm_score));
 	
 						if(j<outdomain_size) {
 						
