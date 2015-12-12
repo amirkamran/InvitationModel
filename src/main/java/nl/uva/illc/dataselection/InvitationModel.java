@@ -348,10 +348,7 @@ public class InvitationModel {
 				//countPD[0] = logAdd(countPD[0], sPD[0][sent]);
 				//countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 				
-				float srcT = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
-				float trgT = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);				
-				
-				results.put(sent, new Result(sent, sPD[0][sent], logAdd(srcT, trgT)));
+				results.put(sent, new Result(sent, sPD[0][sent]));
 
 			}
 			
@@ -427,11 +424,9 @@ public class InvitationModel {
 				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
 				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 
-				float srcP = lm[0][sent];
-				float trgP = lm[1][sent];
-				float srcT = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
-				float trgT = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);
-				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcT+trgP, trgT+srcP)));
+				float srcP = - lm[0][sent];
+				float trgP = - lm[1][sent];
+				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
 
 			}
 
