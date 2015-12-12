@@ -316,7 +316,7 @@ public class InvitationModel {
 
 			float sPD[][] = new float[2][src_mixdomain.length];
 
-			int splits = 50;
+			int splits = 20;
 			int split_size = src_mixdomain.length / splits;
 
 			latch = new CountDownLatch(splits);
@@ -393,7 +393,7 @@ public class InvitationModel {
 
 			float sPD[][] = new float[2][src_mixdomain.length];
 
-			int splits = 50;
+			int splits = 20;
 			int split_size = src_mixdomain.length / splits;
 
 			latch = new CountDownLatch(splits);
@@ -969,7 +969,8 @@ public class InvitationModel {
 					String line = null;
 					int i = 0;
 					while((line=reader.readLine())!=null) {
-						lm[index][i++] = Float.parseFloat(line);
+						lm[index][i] = Float.parseFloat(line) - (float)Math.log(corpus[i].length);
+						i++;
 					}
 					
 					reader.close();
