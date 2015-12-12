@@ -44,7 +44,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import net.openhft.koloboke.collect.map.hash.HashIntFloatMap;
@@ -427,7 +426,9 @@ public class InvitationModel {
 
 				float srcP = lm[0][sent];
 				float trgP = lm[1][sent];
-				results.put(sent, new Result(sent, sPD[1][sent], srcP + trgP));
+				float srcT = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
+				float trgT = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);
+				results.put(sent, new Result(sent, sPD[1][sent], srcT + trgT + srcP + trgP));
 
 			}
 
@@ -510,10 +511,8 @@ public class InvitationModel {
 					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
 					float mix_score = PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
 
-					//sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
-					//sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
-					sPD[1][sent] = in_score;
-					sPD[0][sent] = mix_score;
+					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
 					
 
 				}
@@ -548,13 +547,9 @@ public class InvitationModel {
 					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
 					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
-					//sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
-					//sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
 					
-					sPD[1][sent] = in_score;
-					sPD[0][sent] = mix_score;
-					
-
 				}
 				InvitationModel.latch.countDown();
 			}
@@ -958,11 +953,8 @@ public class InvitationModel {
 				
 				String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
 				
-				//runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
-				//runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
-				
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -lm " + fileName + ".lm.gz");
-				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");				
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
+				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
 				
 				lm[index] = new float[corpus.length];
 				
