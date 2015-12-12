@@ -510,8 +510,11 @@ public class InvitationModel {
 					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
 					float mix_score = PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
 
-					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
-					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					//sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					//sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					sPD[1][sent] = in_score;
+					sPD[0][sent] = mix_score;
+					
 
 				}
 				InvitationModel.latch.countDown();
@@ -545,8 +548,12 @@ public class InvitationModel {
 					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
 					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
-					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
-					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					//sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					//sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					
+					sPD[1][sent] = in_score;
+					sPD[0][sent] = mix_score;
+					
 
 				}
 				InvitationModel.latch.countDown();
@@ -955,7 +962,7 @@ public class InvitationModel {
 				//runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
 				
 				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -lm " + fileName + ".lm.gz");
-				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $6}' | head -n -1 > " + fileName + ".ppl");				
+				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");				
 				
 				lm[index] = new float[corpus.length];
 				
@@ -969,7 +976,7 @@ public class InvitationModel {
 					String line = null;
 					int i = 0;
 					while((line=reader.readLine())!=null) {
-						lm[index][i] = (float)Math.log(1/Float.parseFloat(line));
+						lm[index][i] = Float.parseFloat(line);
 						i++;
 					}
 					
