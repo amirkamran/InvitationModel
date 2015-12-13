@@ -60,7 +60,7 @@ public class PerplexityCalculator {
 		
 		latch = new CountDownLatch(2*d*splits);
 		for(int i=0;i<d;i++) {
-			String fileName = "selected" + i+files1;
+			String fileName = "selected" + (i+files1);
 			Future f1 = splitFile(fileName, src, trg, tokens, splits);
 			for(int j=1;j<=splits;j++) {
 				Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
