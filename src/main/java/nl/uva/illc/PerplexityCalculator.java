@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -114,6 +115,72 @@ public class PerplexityCalculator {
 					System.out.println("Spliting file . . . " + fileName);
 					
 					long splitSize = tokens / splits;
+					
+					ArrayList<String> src_sentences = new ArrayList<String>();
+					ArrayList<String> trg_sentences = new ArrayList<String>();
+					
+					BufferedReader src_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + src), "UTF8"));
+					BufferedReader trg_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + trg), "UTF8"));
+					String line = null;
+					try{
+						while((line=src_reader.readLine())!=null) {
+							src_sentences.add(line);
+							trg_sentences.add(trg_reader.readLine());
+						}
+						src_reader.close();
+						trg_reader.close();
+					}catch(Exception e){}
+					
+					
+					int s = 0;
+					int j = 1;
+					
+					PrintWriter src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + j), "UTF8"));
+					PrintWriter trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + j), "UTF8"));
+					
+					try {
+										
+						for(int i=0;i<src_sentences.size();i++) {
+							
+							s += src_sentences.get(i).split("\\s+").length;
+							src_out.println(src_sentences.get(i));
+							trg_out.println(trg_sentences.get(i));
+	
+							if(s >= j*splitSize && j<splits) {
+								i = 0;
+								s = 0;
+								src_out.close();
+								trg_out.close();							
+								j++;
+								src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + j), "UTF8"));
+								trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + j), "UTF8"));							
+							}
+							
+						}
+					
+					}catch(Exception e) {
+						src_out.close();
+						trg_out.close();
+					}
+					
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.exit(1);
+				}				
+			}
+		});
+	}
+	
+	@SuppressWarnings("rawtypes")
+	public static Future splitFile2(final String fileName, final String src, final String trg, final long tokens, final int splits) {
+		return jobs.submit(new Runnable() {			
+			@Override
+			public void run() {
+				try {
+					
+					System.out.println("Spliting file . . . " + fileName);
+					
+					long splitSize = tokens / splits;
 
 					BufferedReader src_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + src), "UTF8"));
 					BufferedReader trg_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + trg), "UTF8"));
@@ -147,7 +214,7 @@ public class PerplexityCalculator {
 				}				
 			}
 		});
-	}
+	}	
 	
 	
     @SuppressWarnings("rawtypes")
