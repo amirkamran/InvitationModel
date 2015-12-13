@@ -138,7 +138,12 @@ public class InvitationModel {
 			log.info("Start ...");
 			
 			processCommandLineArguments(args);
-			readFiles();			
+			readFiles();
+			
+			/*V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
+			nV = n + V;
+			p = - nV;*/
+			
 			initialize();
 			burnIN();
 			createLM();
@@ -211,12 +216,15 @@ public class InvitationModel {
 			ttable[i] = new TranslationTable();
 		}
 
-		latch = new CountDownLatch(1);
+		latch = new CountDownLatch(2);
 
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
-		//initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);
-		//initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
-		//initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
+		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);
+		
+		// initialize the outdomain with normal distribution
+
+		// initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		// initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 
 		latch.await();
 
@@ -374,11 +382,11 @@ public class InvitationModel {
 		ttable[2] = new TranslationTable();
 		ttable[3] = new TranslationTable();		
 		
-		latch = new CountDownLatch(2);
+		latch = new CountDownLatch(4);
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
-		//initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
+		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
 		initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
-		//initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
+		initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
 		latch.await();
 
 		for (int i = 1; i <= iMAX; i++) {
@@ -442,11 +450,11 @@ public class InvitationModel {
 
 			if (i < iMAX) {
 				
-				latch = new CountDownLatch(2);
-				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
-				//updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
+				latch = new CountDownLatch(4);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, src_indomain, trg_indomain, ttable[0], sPD[1], 0);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, trg_indomain, src_indomain, ttable[1], sPD[1], 0);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
-				//updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();
 			}
 			
@@ -497,16 +505,12 @@ public class InvitationModel {
 					float sProb[] = new float[4];
 
 					sProb[0] = calculateProb(ssent, tsent, ttable[0]);
-					//sProb[1] = calculateProb(tsent, ssent, ttable[1]);
+					sProb[1] = calculateProb(tsent, ssent, ttable[1]);
 					sProb[2] = calculateProb(ssent, tsent, ttable[2]);
-					//sProb[3] = calculateProb(tsent, ssent, ttable[3]);
+					sProb[3] = calculateProb(tsent, ssent, ttable[3]);
 
-					//float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
-					//float mix_score = PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
-					
-					float in_score  = PD1 + sProb[0] + lm[1][sent];
-					float mix_score = PD0 + sProb[2] + lm[3][sent];
-					
+					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
+					float mix_score = PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
 
 					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
 					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
@@ -537,15 +541,12 @@ public class InvitationModel {
 					float sProb[] = new float[4];
 
 					sProb[0] = calculateProb(ssent, tsent, ttable[0]);
-					//sProb[1] = calculateProb(tsent, ssent, ttable[1]);
+					sProb[1] = calculateProb(tsent, ssent, ttable[1]);
 					sProb[2] = calculateProb(ssent, tsent, ttable[2]);
-					//sProb[3] = calculateProb(tsent, ssent, ttable[3]);
+					sProb[3] = calculateProb(tsent, ssent, ttable[3]);
 
-					//float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
-					//float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
-					
-					float in_score  = PD1 + sProb[0];
-					float mix_score = PD0 + sProb[2];					
+					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
+					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
 					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
 					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
@@ -606,7 +607,7 @@ public class InvitationModel {
 						
 						outdomain_token_count += ssent.length;
 	
-						out_score.println(r.sentenceNumber + "\t" + Math.exp(r.score) + "\t" + Math.exp(r.lm_score));
+						out_score.println(r.sentenceNumber + "\t" + Math.exp(r.score));
 	
 						if(j<outdomain_size) {
 						
@@ -968,8 +969,7 @@ public class InvitationModel {
 					String line = null;
 					int i = 0;
 					while((line=reader.readLine())!=null) {
-						lm[index][i] = Float.parseFloat(line);
-						i++;
+						lm[index][i++] = Float.parseFloat(line);
 					}
 					
 					reader.close();
@@ -977,9 +977,6 @@ public class InvitationModel {
 					throw new RuntimeException(e);
 				}
 
-				log.info("checking random language model score " + lm[index][0]);
-				log.info("checking random language model score " + lm[index][1899999]);
-				
 				log.info(".");
 
 				InvitationModel.latch.countDown();
