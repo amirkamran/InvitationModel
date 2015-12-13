@@ -429,7 +429,7 @@ public class InvitationModel {
 
 				float srcP = lm[0][sent];
 				float trgP = lm[1][sent];
-				results.put(sent, new Result(sent, sPD[1][sent], srcP + trgP + (float)Math.log(src_mixdomain[sent].length)));
+				results.put(sent, new Result(sent, sPD[1][sent], (float)Math.exp(srcP + trgP) * (float)Math.log(src_mixdomain[sent].length)));
 
 			}
 
@@ -661,7 +661,7 @@ public class InvitationModel {
 					for (Result r : sortedResult) {
 						output.println(r.sentenceNumber + "\t"
 								+ Math.exp(r.score) + "\t"
-								+ Math.exp(r.lm_score));
+								+ r.lm_score);
 					}
 					output.close();
 				} catch (FileNotFoundException e) {
