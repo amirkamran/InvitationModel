@@ -293,8 +293,8 @@ public class InvitationModel {
 		
 		latch = new CountDownLatch(4);
 
-		createLM(IN + "." + SRC + ".encoded", lm, 0, src_mixdomain);
-		createLM(IN + "." + TRG + ".encoded", lm, 1, trg_mixdomain);
+		createLM(IN  + "." + SRC + ".encoded", lm, 0, src_mixdomain);
+		createLM(IN  + "." + TRG + ".encoded", lm, 1, trg_mixdomain);
 		createLM(OUT + "." + SRC + ".encoded", lm, 2, src_mixdomain);
 		createLM(OUT + "." + TRG + ".encoded", lm, 3, trg_mixdomain);
 
@@ -453,8 +453,8 @@ public class InvitationModel {
 			if (i < iMAX) {
 				
 				latch = new CountDownLatch(4);
-				updateTranslationTable(src_mixdomain, trg_mixdomain, src_indomain, trg_indomain, ttable[0], sPD[1], 0);
-				updateTranslationTable(trg_mixdomain, src_mixdomain, trg_indomain, src_indomain, ttable[1], sPD[1], 0);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();
@@ -462,7 +462,7 @@ public class InvitationModel {
 			
 			// Reinitialize the language models and translation tables
 			
-			/*if(i==1) {
+			if(i==1) {
 				latch = new CountDownLatch(1);
 				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 				Collections.sort(sortedResult);	
@@ -484,7 +484,7 @@ public class InvitationModel {
 				
 				PD1 = LOG_0_5;
 				PD0 = LOG_0_5;
-			}*/
+			}
 
 		}
 	}
