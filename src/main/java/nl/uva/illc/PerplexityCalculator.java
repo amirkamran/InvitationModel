@@ -41,22 +41,25 @@ public class PerplexityCalculator {
 	@SuppressWarnings("rawtypes")
 	public static void main(String args[]) throws InterruptedException, UnsupportedEncodingException, FileNotFoundException {
 		
-		int files = Integer.parseInt(args[0]);
-		String src = args[1];
-		String trg = args[2];
-		long tokens = Long.parseLong(args[3]);
-		int splits = Integer.parseInt(args[4]);
+		int files1 = Integer.parseInt(args[0]);
+		int files2 = Integer.parseInt(args[1]);
+		String src = args[2];
+		String trg = args[3];
+		long tokens = Long.parseLong(args[4]);
+		int splits = Integer.parseInt(args[5]);
 	
 		double [][]src_perp = null;
 		double [][]trg_perp = null;
 
-		src_perp = new double[files][splits];
-		trg_perp = new double[files][splits];
+		int d = files2 - files1 + 1;
+		
+		src_perp = new double[d][splits];
+		trg_perp = new double[d][splits];
 		
 		new File("./temp").mkdir();
 		
-		latch = new CountDownLatch(2*files*splits);
-		for(int i=1;i<=files;i++) {
+		latch = new CountDownLatch(2*d*splits);
+		for(int i=1;i<=d;i++) {
 			String fileName = "selected" + i;
 			Future f1 = splitFile(fileName, src, trg, tokens, splits);
 			for(int j=1;j<=splits;j++) {
@@ -71,7 +74,7 @@ public class PerplexityCalculator {
 		latch.await();
 		jobs.shutdown();
 		PrintWriter ppl_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("ppl.txt"), "UTF8"));
-		for(int i=0;i<files;i++) {
+		for(int i=0;i<d;i++) {
 			for(int j=0;j<splits;j++) {
 				ppl_out.print(Math.sqrt(src_perp[i][j]*trg_perp[i][j]) + "\t");
 			}
