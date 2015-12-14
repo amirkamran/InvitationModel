@@ -216,15 +216,15 @@ public class InvitationModel {
 			ttable[i] = new TranslationTable();
 		}
 
-		latch = new CountDownLatch(2);
+		latch = new CountDownLatch(4);
 
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);
 		
 		// initialize the outdomain with normal distribution
 
-		// initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
-		// initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
+		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 
 		latch.await();
 
