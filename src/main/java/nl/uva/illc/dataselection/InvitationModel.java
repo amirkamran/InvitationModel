@@ -385,8 +385,8 @@ public class InvitationModel {
 		latch = new CountDownLatch(4);
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
-		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
-		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
+		initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
+		initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
 		latch.await();
 
 		for (int i = 1; i <= iMAX; i++) {
@@ -451,8 +451,8 @@ public class InvitationModel {
 			if (i < iMAX) {
 				
 				latch = new CountDownLatch(4);
-				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
-				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, src_indomain, trg_indomain, ttable[0], sPD[1], (float)Math.log(1));
+				updateTranslationTable(trg_mixdomain, src_mixdomain, trg_indomain, src_indomain, ttable[1], sPD[1], (float)Math.log(1));
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();
