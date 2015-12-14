@@ -382,11 +382,11 @@ public class InvitationModel {
 		ttable[2] = new TranslationTable();
 		ttable[3] = new TranslationTable();		
 		
-		latch = new CountDownLatch(2);
+		latch = new CountDownLatch(4);
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
-		//initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
-		//initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
+		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 		latch.await();
 
 		for (int i = 1; i <= iMAX; i++) {
