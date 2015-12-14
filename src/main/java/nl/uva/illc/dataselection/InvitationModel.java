@@ -280,13 +280,13 @@ public class InvitationModel {
 
 		log.info("Creating Language Models ...");
 		
-		String mixFileName = MIX + "." + SRC + ".encoded";
+		/*String mixFileName = MIX + "." + SRC + ".encoded";
 		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
 		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
 		
 		mixFileName = MIX + "." + TRG + ".encoded";
 		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
+		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");*/
 		
 		
 		lm = new float[4][];
@@ -931,7 +931,7 @@ public class InvitationModel {
 			public void run() {
 				log.info("Creating language model");
 
-				/*NgramLanguageModel<String> createdLM = null;
+				NgramLanguageModel<String> createdLM = null;
 				final int lmOrder = 5;
 				final List<String> inputFiles = new ArrayList<String>();
 				inputFiles.add(fileName);
@@ -950,9 +950,9 @@ public class InvitationModel {
 				for (int i = 0; i < corpus.length; i++) {
 					int sent[] = corpus[i];
 					lm[index][i] = getLMProb(createdLM, sent);
-				}*/
+				}
 				
-				String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
+				/*String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
 				
 				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
 				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
@@ -975,7 +975,7 @@ public class InvitationModel {
 					reader.close();
 				} catch(Exception e) {
 					throw new RuntimeException(e);
-				}
+				}*/
 
 				log.info(".");
 
