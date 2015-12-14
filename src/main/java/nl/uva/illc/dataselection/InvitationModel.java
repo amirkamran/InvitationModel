@@ -429,9 +429,7 @@ public class InvitationModel {
 
 				float srcP = lm[0][sent];
 				float trgP = lm[1][sent];
-				double lenght_normalize_lm_score = Math.exp(srcP) * Math.log(src_mixdomain[sent].length);
-				lenght_normalize_lm_score += Math.exp(trgP) * Math.log(trg_mixdomain[sent].length);
-				results.put(sent, new Result(sent, sPD[1][sent], (float)lenght_normalize_lm_score));
+				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
 
 			}
 
