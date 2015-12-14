@@ -29,6 +29,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -58,10 +59,17 @@ public class PerplexityCalculator {
 		
 		new File("./temp").mkdir();
 		
-		runCommand("./ngram-count -text cmix." + src + " -write-order 1 -write ./temp/cmix." + src + ".1cnt");
-		runCommand("awk '$2 > 1' ./temp/cmix." + src + ".1cnt | cut -f1 | sort > ./temp/cmix." + src + ".vocab");
-		runCommand("./ngram-count -text cmix." + trg + " -write-order 1 -write ./temp/cmix." + trg + ".1cnt");
-		runCommand("awk '$2 > 1' ./temp/cmix." + trg + ".1cnt | cut -f1 | sort > ./temp/cmix." + trg + ".vocab");				
+		Future cnt1 = runCommand("./ngram-count -text cmix." + src + " -write-order 1 -write ./temp/cmix." + src + ".1cnt");
+		Future v1 = runCommand("awk '$2 > 1' ./temp/cmix." + src + ".1cnt | cut -f1 | sort > ./temp/cmix." + src + ".vocab", cnt1);
+		Future cnt2 = runCommand("./ngram-count -text cmix." + trg + " -write-order 1 -write ./temp/cmix." + trg + ".1cnt");
+		Future v2 = runCommand("awk '$2 > 1' ./temp/cmix." + trg + ".1cnt | cut -f1 | sort > ./temp/cmix." + trg + ".vocab", cnt2);
+		
+		try {
+			v1.get();
+			v2.get();			
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
 		
 		latch = new CountDownLatch(2*d*splits);
 		for(int i=0;i<d;i++) {
