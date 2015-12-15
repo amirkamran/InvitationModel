@@ -131,6 +131,8 @@ public class InvitationModel {
 	public static float V = (float)Math.log(100000);
 	public static float nV = n + V;
 	public static float p = - nV;
+	
+	public static float[] sortScores;
 
 	public static void main(String args[]) throws InterruptedException {
 		
@@ -357,9 +359,11 @@ public class InvitationModel {
 			
 			//PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
 			//PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);
+			
+			sortScores = sPD[1];
 						
 		}
-		
+				
 		latch = new CountDownLatch(1);
 		ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 		Collections.sort(sortedResult);
@@ -429,7 +433,7 @@ public class InvitationModel {
 
 				float srcP = lm[0][sent];
 				float trgP = lm[1][sent];
-				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
+				results.put(sent, new Result(sent, sPD[1][sent], logAdd(sortScores[sent], srcP*trgP)));
 
 			}
 
