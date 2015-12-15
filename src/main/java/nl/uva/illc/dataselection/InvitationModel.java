@@ -218,7 +218,7 @@ public class InvitationModel {
 			ttable[i] = new TranslationTable();
 		}
 
-		latch = new CountDownLatch(4);
+		latch = new CountDownLatch(2);
 
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);
