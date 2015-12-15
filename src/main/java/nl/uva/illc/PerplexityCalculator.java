@@ -76,7 +76,7 @@ public class PerplexityCalculator {
 		for(int i=0;i<d;i++) {
 			String fileName = "selected" + (i+files1);
 			Future f1 = splitFile(fileName, src, trg, tokens, splits, upto);
-			for(int j=1;j<=splits;j++) {
+			for(int j=1;j<=upto;j++) {
 				Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
 				//Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
 				Future f3 = runCommand("./ngram -unk -lm ./temp/" + fileName+"."+src+"."+j +".lm -ppl ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
