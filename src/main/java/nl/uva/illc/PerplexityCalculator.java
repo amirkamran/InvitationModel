@@ -48,18 +48,19 @@ public class PerplexityCalculator {
 		String trg = args[3];
 		long tokens = Long.parseLong(args[4]);
 		int splits = Integer.parseInt(args[5]);
+		int upto = Integer.parseInt(args[6]);
 	
 		double [][]src_perp = null;
 		double [][]trg_perp = null;
 
 		int d = files2 - files1 + 1;
 		
-		src_perp = new double[d][splits];
-		trg_perp = new double[d][splits];
+		src_perp = new double[d][upto];
+		trg_perp = new double[d][upto];
 		
 		new File("./temp").mkdir();
 		
-		/*Future cnt1 = runCommand("./ngram-count -text cmix." + src + " -write-order 1 -write ./temp/cmix." + src + ".1cnt");
+		Future cnt1 = runCommand("./ngram-count -text cmix." + src + " -write-order 1 -write ./temp/cmix." + src + ".1cnt");
 		Future v1 = runCommand("awk '$2 > 1' ./temp/cmix." + src + ".1cnt | cut -f1 | sort > ./temp/cmix." + src + ".vocab", cnt1);
 		Future cnt2 = runCommand("./ngram-count -text cmix." + trg + " -write-order 1 -write ./temp/cmix." + trg + ".1cnt");
 		Future v2 = runCommand("awk '$2 > 1' ./temp/cmix." + trg + ".1cnt | cut -f1 | sort > ./temp/cmix." + trg + ".vocab", cnt2);
@@ -69,18 +70,18 @@ public class PerplexityCalculator {
 			v2.get();			
 		} catch (ExecutionException e) {
 			e.printStackTrace();
-		}*/
+		}
 		
-		latch = new CountDownLatch(2*d*splits);
+		latch = new CountDownLatch(2*d*upto);
 		for(int i=0;i<d;i++) {
 			String fileName = "selected" + (i+files1);
-			Future f1 = splitFile(fileName, src, trg, tokens, splits);
+			Future f1 = splitFile(fileName, src, trg, tokens, splits, upto);
 			for(int j=1;j<=splits;j++) {
-				//Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
-				Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
+				Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
+				//Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
 				Future f3 = runCommand("./ngram -unk -lm ./temp/" + fileName+"."+src+"."+j +".lm -ppl ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
-				//Future f4 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
-				Future f4 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
+				Future f4 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
+				//Future f4 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
 				Future f5 = runCommand("./ngram -unk -lm ./temp/" + fileName+"."+trg+"."+j +".lm -ppl ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);				
 				readPpl(src_perp, "./temp/" + fileName+"."+src+"."+j + ".ppl", i, j-1, f3);
 				readPpl(trg_perp, "./temp/" + fileName+"."+trg+"."+j + ".ppl", i, j-1, f5);
@@ -90,7 +91,7 @@ public class PerplexityCalculator {
 		jobs.shutdown();
 		PrintWriter ppl_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("ppl.txt"), "UTF8"));
 		for(int i=0;i<d;i++) {
-			for(int j=0;j<splits;j++) {
+			for(int j=0;j<upto;j++) {
 				ppl_out.print(Math.sqrt(src_perp[i][j]*trg_perp[i][j]) + "\t");
 			}
 			ppl_out.println();
@@ -124,7 +125,7 @@ public class PerplexityCalculator {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	public static Future splitFile(final String fileName, final String src, final String trg, final long tokens, final int splits) {
+	public static Future splitFile(final String fileName, final String src, final String trg, final long tokens, final int splits, final int upto) {
 		return jobs.submit(new Runnable() {			
 			@Override
 			public void run() {
@@ -170,6 +171,7 @@ public class PerplexityCalculator {
 								src_out.close();
 								trg_out.close();							
 								j++;
+								if(j==upto+1) break;
 								src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + j), "UTF8"));
 								trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + j), "UTF8"));							
 							}
@@ -190,7 +192,7 @@ public class PerplexityCalculator {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	public static Future splitFile2(final String fileName, final String src, final String trg, final long tokens, final int splits) {
+	public static Future splitFile2(final String fileName, final String src, final String trg, final long tokens, final int splits, final int upto) {
 		return jobs.submit(new Runnable() {			
 			@Override
 			public void run() {
@@ -217,6 +219,7 @@ public class PerplexityCalculator {
 								src_out.close();
 								trg_out.close();
 								i++;
+								if(i==upto+1) break;
 								src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + i), "UTF8"));
 								trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + i), "UTF8"));
 							}
