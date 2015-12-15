@@ -142,9 +142,9 @@ public class InvitationModel {
 			processCommandLineArguments(args);
 			readFiles();
 			
-			/*V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
+			V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
 			nV = n + V;
-			p = - nV;*/
+			p = - nV;
 			
 			initialize();
 			burnIN();
@@ -225,8 +225,8 @@ public class InvitationModel {
 		
 		// initialize the outdomain with normal distribution
 
-		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
-		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
+		//initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		//initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 
 		latch.await();
 
