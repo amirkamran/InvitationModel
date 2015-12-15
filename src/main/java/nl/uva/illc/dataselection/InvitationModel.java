@@ -132,8 +132,6 @@ public class InvitationModel {
 	public static float nV = n + V;
 	public static float p = - nV;
 	
-	public static float[] sortScores;
-
 	public static void main(String args[]) throws InterruptedException {
 		
 		try{
@@ -148,7 +146,7 @@ public class InvitationModel {
 			
 			initialize();
 			burnIN();
-			createLM();
+			createOutLM();
 			training();
 	
 		} catch(Exception e) {			
@@ -218,17 +216,29 @@ public class InvitationModel {
 			ttable[i] = new TranslationTable();
 		}
 
-		latch = new CountDownLatch(4);
+		latch = new CountDownLatch(2);
 
 		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
 		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);
 		
 		// initialize the outdomain with normal distribution
 
-		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
-		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
+		//initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		//initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 
 		latch.await();
+		
+		String mixFileName = MIX + "." + SRC + ".encoded";
+		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
+		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
+		
+		mixFileName = MIX + "." + TRG + ".encoded";
+		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
+		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
+		
+		lm = new float[4][];
+		
+		createInLM();
 
 		log.info("DONE");
 	}
@@ -278,25 +288,27 @@ public class InvitationModel {
 
 	}
 
-	public static void createLM() throws InterruptedException {
+	public static void createInLM() throws InterruptedException {
 
-		log.info("Creating Language Models ...");
-		
-		String mixFileName = MIX + "." + SRC + ".encoded";
-		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
-		
-		mixFileName = MIX + "." + TRG + ".encoded";
-		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
-		
-		
-		lm = new float[4][];
-		
-		latch = new CountDownLatch(4);
+		log.info("Creating In-Domain Language Models ...");
+						
+		latch = new CountDownLatch(2);
 
 		createLM(IN  + "." + SRC + ".encoded", lm, 0, src_mixdomain);
 		createLM(IN  + "." + TRG + ".encoded", lm, 1, trg_mixdomain);
+		
+		latch.await();
+
+		log.info("DONE");
+
+	}
+	
+	public static void createOutLM() throws InterruptedException {
+
+		log.info("Creating Out-Domain Language Models ...");
+		
+		latch = new CountDownLatch(2);
+
 		createLM(OUT + "." + SRC + ".encoded", lm, 2, src_mixdomain);
 		createLM(OUT + "." + TRG + ".encoded", lm, 3, trg_mixdomain);
 
@@ -305,6 +317,7 @@ public class InvitationModel {
 		log.info("DONE");
 
 	}
+	
 
 	public static void burnIN() throws IOException, InterruptedException {
 
@@ -360,8 +373,6 @@ public class InvitationModel {
 			//PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
 			//PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);
 			
-			sortScores = sPD[1];
-						
 		}
 				
 		latch = new CountDownLatch(1);
@@ -431,9 +442,11 @@ public class InvitationModel {
 				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
 				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 
-				float srcP = lm[0][sent];
-				float trgP = lm[1][sent];
-				results.put(sent, new Result(sent, sPD[1][sent], logAdd(sortScores[sent], srcP+trgP)));
+				//float srcP = lm[0][sent];
+				//float trgP = lm[1][sent];
+				float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
+				float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);
+				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
 
 			}
 
@@ -549,7 +562,7 @@ public class InvitationModel {
 					sProb[2] = calculateProb(ssent, tsent, ttable[2]);
 					sProb[3] = calculateProb(tsent, ssent, ttable[3]);
 
-					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
+					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
 					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
 					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
