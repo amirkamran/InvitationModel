@@ -433,7 +433,7 @@ public class InvitationModel {
 
 				float srcP = lm[0][sent];
 				float trgP = lm[1][sent];
-				results.put(sent, new Result(sent, sPD[1][sent], logAdd(sortScores[sent], srcP*trgP)));
+				results.put(sent, new Result(sent, sPD[1][sent], logAdd(sortScores[sent], srcP+trgP)));
 
 			}
 
