@@ -140,9 +140,9 @@ public class InvitationModel {
 			processCommandLineArguments(args);
 			readFiles();
 			
-			/*V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
+			V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
 			nV = n + V;
-			p = - nV;*/
+			p = - nV;
 			
 			initialize();
 			burnIN();
@@ -397,16 +397,16 @@ public class InvitationModel {
 
 		log.info("Starting Invitation EM ...");
 		
-		//PD1 = LOG_0_5;
-		//PD0 = LOG_0_5;
-		//ttable[0] = new TranslationTable();
-		//ttable[1] = new TranslationTable();				
+		PD1 = LOG_0_5;
+		PD0 = LOG_0_5;
+		ttable[0] = new TranslationTable();
+		ttable[1] = new TranslationTable();				
 		ttable[2] = new TranslationTable();
 		ttable[3] = new TranslationTable();		
 		
-		latch = new CountDownLatch(2);
-		//initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
-		//initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
+		latch = new CountDownLatch(4);
+		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
+		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
 		initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
 		initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
 		latch.await();
@@ -491,13 +491,13 @@ public class InvitationModel {
 				Collections.reverse(sortedResult);	
 				writeOutdomain(sortedResult);
 				latch.await();
-				latch = new CountDownLatch(4);
-				//ttable[0] = new TranslationTable();
-				//ttable[1] = new TranslationTable();				
+				latch = new CountDownLatch(6);
+				ttable[0] = new TranslationTable();
+				ttable[1] = new TranslationTable();				
 				ttable[2] = new TranslationTable();
 				ttable[3] = new TranslationTable();
-				//initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
-				//initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);				
+				initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
+				initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);				
 				initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
 				initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
 				createLM(OUT + "." + SRC + ".encoded", lm, 2, src_mixdomain);
