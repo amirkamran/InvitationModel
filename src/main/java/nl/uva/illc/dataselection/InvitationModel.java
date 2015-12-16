@@ -356,7 +356,7 @@ public class InvitationModel {
 				if (ignore.containsKey(sent))
 					continue;
 
-				if ( Float.isNaN(sPD[1][sent])) {
+				if (Float.isNaN(sPD[0][sent]) || Float.isNaN(sPD[1][sent])) {
 					ignore.put(sent, sent);
 					log.info("Ignoring " + (sent + 1));
 					continue;
