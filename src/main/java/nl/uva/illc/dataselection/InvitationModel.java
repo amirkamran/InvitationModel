@@ -140,9 +140,9 @@ public class InvitationModel {
 			processCommandLineArguments(args);
 			readFiles();
 			
-			V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
+			/*V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
 			nV = n + V;
-			p = - nV;
+			p = - nV;*/
 			
 			initialize();
 			burnIN();
@@ -167,8 +167,8 @@ public class InvitationModel {
 		options.addOption("src", "src-language", true, "Source Language");
 		options.addOption("trg", "trg-language", true, "Target Language");
 		options.addOption("i", "max-iterations", true, "Maximum Iterations");
-		options.addOption("th", "threshold", true, "This threshold deicdes which sentences updates translation tables. Default is 0.5");
-		options.addOption("cf", "conv_threshold", true, "This threshold decide if the convergence is reached. Default is 0.00001");		
+		options.addOption("th", "threshold", true, "This threshold deicdes which sentences updates translation tables. Default is 0");
+		options.addOption("cf", "conv_threshold", true, "This threshold decide if the convergence is reached. Default is 0, which means ignore this threshold.");		
 
 		CommandLineParser parser = new GnuParser();
 		try {
@@ -228,13 +228,13 @@ public class InvitationModel {
 
 		latch.await();
 		
-		/*String mixFileName = MIX + "." + SRC + ".encoded";
+		String mixFileName = MIX + "." + SRC + ".encoded";
 		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
 		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
 		
 		mixFileName = MIX + "." + TRG + ".encoded";
 		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");*/
+		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
 		
 		lm = new float[4][];
 		
@@ -325,7 +325,7 @@ public class InvitationModel {
 
 		HashIntObjMap<Result> results = null;
 
-		for (int i = 1; i <= 1; i++) {
+		for (int i = 1; i <= 2; i++) {
 
 			log.info("Iteration " + i);
 
@@ -347,10 +347,9 @@ public class InvitationModel {
 			}
 			latch.await();
 			
-
-			//float countPD[] = new float[2];
-			//countPD[0] = Float.NEGATIVE_INFINITY;
-			//countPD[1] = Float.NEGATIVE_INFINITY;
+			float countPD[] = new float[2];
+			countPD[0] = Float.NEGATIVE_INFINITY;
+			countPD[1] = Float.NEGATIVE_INFINITY;
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
@@ -363,22 +362,29 @@ public class InvitationModel {
 					continue;
 				}
 
-				//countPD[0] = logAdd(countPD[0], sPD[0][sent]);
-				//countPD[1] = logAdd(countPD[1], sPD[1][sent]);
+				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 				
-				results.put(sent, new Result(sent, sPD[1][sent]));
+				results.put(sent, new Result(sent, sPD[0][sent]));
 
 			}
 			
-			//PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
-			//PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);
+			PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
+			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);			
 			
+			if(i==1) {
+				latch = new CountDownLatch(4);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
+				latch.await();			
+			}
 		}
 				
 		latch = new CountDownLatch(1);
 		ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 		Collections.sort(sortedResult);
-		Collections.reverse(sortedResult);
 		writeOutdomain(sortedResult);
 		latch.await();
 		
@@ -558,19 +564,20 @@ public class InvitationModel {
 
 					float sProb[] = new float[4];
 
-					sProb[0] = calculateProb(ssent, tsent, ttable[0]);
-					sProb[1] = calculateProb(tsent, ssent, ttable[1]);
-					//sProb[2] = calculateProb(ssent, tsent, ttable[2]);
-					//sProb[3] = calculateProb(tsent, ssent, ttable[3]);
-
-					//float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
-					//float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
-
-					//sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
-					//sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					float p0_2[] = calculateProb(ssent, tsent, ttable[0], ttable[2]);					
+					float p1_3[] = calculateProb(tsent, ssent, ttable[1], ttable[3]);
 					
-					sPD[1][sent] = logAdd(sProb[0], sProb[1]);
-					
+					sProb[0] = p0_2[0];
+					sProb[1] = p1_3[0];
+					sProb[2] = p0_2[1];
+					sProb[3] = p1_3[1];
+
+					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
+					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
+
+					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+										
 				}
 				InvitationModel.latch.countDown();
 			}
@@ -706,6 +713,27 @@ public class InvitationModel {
 		}
 		return prob - (float)Math.log(Math.pow(ssent.length, tsent.length-1));
 	}
+	
+	public static float[] calculateProb(final int ssent[], final int tsent[],
+			final TranslationTable ttable1, final TranslationTable ttable2) {
+		float prob1 = 0;
+		float prob2 = 0;
+		for (int t = 1; t < tsent.length; t++) {
+			int tw = tsent[t];
+			float sum1 = Float.NEGATIVE_INFINITY;
+			float sum2 = Float.NEGATIVE_INFINITY;
+			for (int s = 0; s < ssent.length; s++) {
+				int sw = ssent[s];
+				sum1 = logAdd(sum1, ttable1.get(tw, sw, p));
+				sum2 = logAdd(sum2, ttable2.get(tw, sw, p));
+			}
+			prob1 += sum1;
+			prob2 += sum2;
+		}
+		float e = (float)Math.log(Math.pow(ssent.length, tsent.length-1));
+		float[] probs = new float[]{prob1-e, prob2-e};
+		return probs;
+	}	
 
 	public static void updateTranslationTable(final int src[][],
 			final int trg[][], final TranslationTable ttable, final float sPD[]) {
@@ -951,7 +979,7 @@ public class InvitationModel {
 			public void run() {
 				log.info("Creating language model");
 
-				NgramLanguageModel<String> createdLM = null;
+				/*NgramLanguageModel<String> createdLM = null;
 				final int lmOrder = 5;
 				final List<String> inputFiles = new ArrayList<String>();
 				inputFiles.add(fileName);
@@ -970,9 +998,9 @@ public class InvitationModel {
 				for (int i = 0; i < corpus.length; i++) {
 					int sent[] = corpus[i];
 					lm[index][i] = getLMProb(createdLM, sent);
-				}
+				}*/
 				
-				/*String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
+				String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
 				
 				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
 				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
@@ -995,7 +1023,7 @@ public class InvitationModel {
 					reader.close();
 				} catch(Exception e) {
 					throw new RuntimeException(e);
-				}*/
+				}
 
 				log.info(".");
 
