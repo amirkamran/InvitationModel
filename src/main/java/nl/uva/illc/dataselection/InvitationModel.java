@@ -701,7 +701,7 @@ public class InvitationModel {
 			}
 			prob += sum;
 		}
-		return prob;
+		return prob - (float)Math.log(Math.pow(ssent.length, tsent.length-1));
 	}
 
 	public static void updateTranslationTable(final int src[][],
