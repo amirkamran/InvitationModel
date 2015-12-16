@@ -357,7 +357,7 @@ public class InvitationModel {
 				if (ignore.containsKey(sent))
 					continue;
 
-				if (Float.isNaN(sPD[0][sent]) || Float.isNaN(sPD[1][sent])) {
+				if ( Float.isNaN(sPD[1][sent])) {
 					ignore.put(sent, sent);
 					log.info("Ignoring " + (sent + 1));
 					continue;
@@ -366,7 +366,7 @@ public class InvitationModel {
 				//countPD[0] = logAdd(countPD[0], sPD[0][sent]);
 				//countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 				
-				results.put(sent, new Result(sent, sPD[0][sent]));
+				results.put(sent, new Result(sent, sPD[1][sent]));
 
 			}
 			
@@ -378,6 +378,7 @@ public class InvitationModel {
 		latch = new CountDownLatch(1);
 		ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 		Collections.sort(sortedResult);
+		Collections.reverse(sortedResult);
 		writeOutdomain(sortedResult);
 		latch.await();
 		
@@ -559,14 +560,16 @@ public class InvitationModel {
 
 					sProb[0] = calculateProb(ssent, tsent, ttable[0]);
 					sProb[1] = calculateProb(tsent, ssent, ttable[1]);
-					sProb[2] = calculateProb(ssent, tsent, ttable[2]);
-					sProb[3] = calculateProb(tsent, ssent, ttable[3]);
+					//sProb[2] = calculateProb(ssent, tsent, ttable[2]);
+					//sProb[3] = calculateProb(tsent, ssent, ttable[3]);
 
-					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
-					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
+					//float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
+					//float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
-					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
-					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					//sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					//sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					
+					sPD[1][sent] = logAdd(sProb[0], sProb[1]);
 					
 				}
 				InvitationModel.latch.countDown();
