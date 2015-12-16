@@ -443,10 +443,10 @@ public class InvitationModel {
 				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
 				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 
-				//float srcP = lm[0][sent];
-				//float trgP = lm[1][sent];
-				float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
-				float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);
+				float srcP = lm[0][sent];
+				float trgP = lm[1][sent];
+				//float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
+				//float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);
 				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
 
 			}
@@ -469,8 +469,8 @@ public class InvitationModel {
 			if (i < iMAX) {
 				
 				latch = new CountDownLatch(4);
-				updateTranslationTable(src_mixdomain, trg_mixdomain, src_indomain, trg_indomain, ttable[0], sPD[1], (float)Math.log(1));
-				updateTranslationTable(trg_mixdomain, src_mixdomain, trg_indomain, src_indomain, ttable[1], sPD[1], (float)Math.log(1));
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();
