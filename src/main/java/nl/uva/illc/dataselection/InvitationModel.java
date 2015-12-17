@@ -237,7 +237,7 @@ public class InvitationModel {
 						for (int s = 0; s < ssent.length; s++) {
 							int sw = ssent[s];
 							ttable.increas(tw, sw, 1f);
-							totals.addValue(sw, 1f, 1f);
+							totals.addValue(sw, 1f, 0f);
 						}
 					}
 				}
@@ -579,7 +579,7 @@ public class InvitationModel {
 			}
 			prob += sum;
 		}
-		return prob;
+		return prob - (float)Math.log(Math.pow(ssent.length, tsent.length-1));
 	}
 
 	public static void updateTranslationTable(final int src[][],

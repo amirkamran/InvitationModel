@@ -51,7 +51,7 @@ public class TranslationTable {
 			tMap = HashIntFloatMaps.newMutableMap();
 			ttable.put(tw, tMap);
 		}
-		tMap.addValue(sw, value, value);
+		tMap.addValue(sw, value, 0f);
 	}
 
 	public float get(int tw, int sw) {
