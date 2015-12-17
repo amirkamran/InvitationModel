@@ -469,8 +469,8 @@ public class InvitationModel {
 			if (i < iMAX) {
 				
 				latch = new CountDownLatch(4);
-				updateTranslationTable(src_mixdomain, trg_mixdomain, src_indomain, trg_indomain, ttable[0], sPD[1], 0);
-				updateTranslationTable(trg_mixdomain, src_mixdomain, trg_indomain, src_indomain, ttable[1], sPD[1], 0);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();
@@ -748,7 +748,7 @@ public class InvitationModel {
 				for (int tw : counts.ttable.keySet()) {
 					HashIntFloatMap tMap = counts.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						float newProb = counts.get(tw, sw) - totals.get(sw);
+						float newProb = logAdd(counts.get(tw, sw), n) - logAdd(totals.get(sw), nV);
 						ttable.put(tw, sw, newProb);
 					}
 				}
