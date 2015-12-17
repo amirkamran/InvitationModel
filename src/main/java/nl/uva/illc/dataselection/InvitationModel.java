@@ -319,7 +319,7 @@ public class InvitationModel {
 
 		HashIntObjMap<Result> results = null;
 
-		for (int i = 1; i <= 1; i++) {
+		for (int i = 1; i <= 2; i++) {
 
 			log.info("Iteration " + i);
 
@@ -341,9 +341,9 @@ public class InvitationModel {
 			}
 			latch.await();
 			
-			//float countPD[] = new float[2];
-			//countPD[0] = Float.NEGATIVE_INFINITY;
-			//countPD[1] = Float.NEGATIVE_INFINITY;
+			float countPD[] = new float[2];
+			countPD[0] = Float.NEGATIVE_INFINITY;
+			countPD[1] = Float.NEGATIVE_INFINITY;
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
@@ -356,24 +356,24 @@ public class InvitationModel {
 					continue;
 				}
 
-				//countPD[0] = logAdd(countPD[0], sPD[0][sent]);
-				//countPD[1] = logAdd(countPD[1], sPD[1][sent]);
+				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 				
 				results.put(sent, new Result(sent, sPD[0][sent]));
 
 			}
 			
-			//PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
-			//PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);			
+			PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
+			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);			
 			
-			/*if(i==1) {
+			if(i==1) {
 				latch = new CountDownLatch(4);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();			
-			}*/
+			}
 		}
 				
 		latch = new CountDownLatch(1);
@@ -478,7 +478,7 @@ public class InvitationModel {
 			
 			// Reinitialize the language models and translation tables
 			
-			if(i==1) {
+			/*if(i==1) {
 				latch = new CountDownLatch(1);
 				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 				Collections.sort(sortedResult);	
@@ -500,7 +500,7 @@ public class InvitationModel {
 				
 				PD1 = LOG_0_5;
 				PD0 = LOG_0_5;
-			}
+			}*/
 
 		}
 	}
@@ -566,8 +566,8 @@ public class InvitationModel {
 					sProb[2] = p0_2[1];
 					sProb[3] = p1_3[1];
 
-					float in_score  = logAdd(sProb[0], sProb[1]);
-					float mix_score = logAdd(sProb[2], sProb[3]);
+					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
+					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
 					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
 					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
