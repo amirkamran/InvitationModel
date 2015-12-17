@@ -139,12 +139,8 @@ public class InvitationModel {
 			
 			processCommandLineArguments(args);
 			readFiles();
-			
-			V = (float)Math.log(Math.max(src_codes.size(), trg_codes.size()));
-			nV = n + V;
-			p = - nV;
-			
 			initialize();
+			createInLM();			
 			burnIN();
 			createOutLM();
 			training();
@@ -238,8 +234,6 @@ public class InvitationModel {
 		
 		lm = new float[4][];
 		
-		createInLM();
-
 		log.info("DONE");
 	}
 
@@ -347,30 +341,30 @@ public class InvitationModel {
 			}
 			latch.await();
 			
-			float countPD[] = new float[2];
-			countPD[0] = Float.NEGATIVE_INFINITY;
-			countPD[1] = Float.NEGATIVE_INFINITY;
+			//float countPD[] = new float[2];
+			//countPD[0] = Float.NEGATIVE_INFINITY;
+			//countPD[1] = Float.NEGATIVE_INFINITY;
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
 				if (ignore.containsKey(sent))
 					continue;
 
-				if (Float.isNaN(sPD[0][sent]) || Float.isNaN(sPD[1][sent])) {
+				if (Float.isNaN(sPD[0][sent])) {
 					ignore.put(sent, sent);
 					log.info("Ignoring " + (sent + 1));
 					continue;
 				}
 
-				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
-				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
+				//countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				//countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 				
 				results.put(sent, new Result(sent, sPD[0][sent]));
 
 			}
 			
-			PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
-			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);			
+			//PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
+			//PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);			
 			
 			/*if(i==1) {
 				latch = new CountDownLatch(4);
@@ -451,8 +445,8 @@ public class InvitationModel {
 
 				//float srcP = lm[0][sent];
 				//float trgP = lm[1][sent];
-				float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]);
-				float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]);
+				float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]) + lm[1][sent];
+				float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]) + lm[0][sent];
 				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
 
 			}
@@ -572,8 +566,8 @@ public class InvitationModel {
 					sProb[2] = p0_2[1];
 					sProb[3] = p1_3[1];
 
-					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
-					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
+					float in_score  = logAdd(sProb[0], sProb[1]);
+					float mix_score = logAdd(sProb[2], sProb[3]);
 
 					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
 					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
@@ -730,7 +724,7 @@ public class InvitationModel {
 			prob1 += sum1;
 			prob2 += sum2;
 		}
-		float e = LOG_0_5 - (float)Math.log(Math.pow(ssent.length, tsent.length-1));
+		float e = (float)Math.log(Math.pow(ssent.length, tsent.length-1));
 		float[] probs = new float[]{prob1-e, prob2-e};
 		return probs;
 	}	
