@@ -228,13 +228,13 @@ public class InvitationModel {
 
 		latch.await();
 		
-		String mixFileName = MIX + "." + SRC + ".encoded";
+		/*String mixFileName = MIX + "." + SRC + ".encoded";
 		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
 		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
 		
 		mixFileName = MIX + "." + TRG + ".encoded";
 		runCommand("./ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
+		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");*/
 		
 		lm = new float[4][];
 		
@@ -325,7 +325,7 @@ public class InvitationModel {
 
 		HashIntObjMap<Result> results = null;
 
-		for (int i = 1; i <= 2; i++) {
+		for (int i = 1; i <= 1; i++) {
 
 			log.info("Iteration " + i);
 
@@ -372,14 +372,14 @@ public class InvitationModel {
 			PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
 			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);			
 			
-			if(i==1) {
+			/*if(i==1) {
 				latch = new CountDownLatch(4);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();			
-			}
+			}*/
 		}
 				
 		latch = new CountDownLatch(1);
@@ -475,8 +475,8 @@ public class InvitationModel {
 			if (i < iMAX) {
 				
 				latch = new CountDownLatch(4);
-				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
-				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, src_indomain, trg_indomain, ttable[0], sPD[1], 0);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, trg_indomain, src_indomain, ttable[1], sPD[1], 0);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();
@@ -730,7 +730,7 @@ public class InvitationModel {
 			prob1 += sum1;
 			prob2 += sum2;
 		}
-		float e = (float)Math.log(Math.pow(ssent.length, tsent.length-1));
+		float e = LOG_0_5 - (float)Math.log(Math.pow(ssent.length, tsent.length-1));
 		float[] probs = new float[]{prob1-e, prob2-e};
 		return probs;
 	}	
@@ -979,7 +979,7 @@ public class InvitationModel {
 			public void run() {
 				log.info("Creating language model");
 
-				/*NgramLanguageModel<String> createdLM = null;
+				NgramLanguageModel<String> createdLM = null;
 				final int lmOrder = 5;
 				final List<String> inputFiles = new ArrayList<String>();
 				inputFiles.add(fileName);
@@ -998,9 +998,9 @@ public class InvitationModel {
 				for (int i = 0; i < corpus.length; i++) {
 					int sent[] = corpus[i];
 					lm[index][i] = getLMProb(createdLM, sent);
-				}*/
+				}
 				
-				String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
+				/*String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
 				
 				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
 				runCommand("./ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
@@ -1023,7 +1023,7 @@ public class InvitationModel {
 					reader.close();
 				} catch(Exception e) {
 					throw new RuntimeException(e);
-				}
+				}*/
 
 				log.info(".");
 
