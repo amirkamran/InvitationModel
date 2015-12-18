@@ -319,7 +319,7 @@ public class InvitationModel {
 
 		HashIntObjMap<Result> results = null;
 
-		for (int i = 1; i <= 2; i++) {
+		for (int i = 1; i <= 1; i++) {
 
 			log.info("Iteration " + i);
 
@@ -481,7 +481,7 @@ public class InvitationModel {
 			
 			// Reinitialize the language models and translation tables
 			
-			/*if(i==1) {
+			if(i==1) {
 				latch = new CountDownLatch(1);
 				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 				Collections.sort(sortedResult);	
@@ -503,7 +503,7 @@ public class InvitationModel {
 				
 				PD1 = LOG_0_5;
 				PD0 = LOG_0_5;
-			}*/
+			}
 
 		}
 	}
