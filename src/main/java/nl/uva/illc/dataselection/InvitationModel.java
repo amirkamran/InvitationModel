@@ -127,9 +127,9 @@ public class InvitationModel {
 
 	public static HashIntIntMap ignore = HashIntIntMaps.newMutableMap();
 
-	public static float n = (float)Math.log(1);
+	//public static float n = (float)Math.log(1);
 	public static float V = (float)Math.log(100000);
-	public static float nV = n + V;
+	//public static float nV = n + V;
 	public static float p = - V;
 	
 	public static void main(String args[]) throws InterruptedException {
@@ -219,8 +219,8 @@ public class InvitationModel {
 		
 		// initialize the outdomain with normal distribution ??
 
-		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
-		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
+		//initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[2]);
+		//initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[3]);
 
 		latch.await();
 		
@@ -268,7 +268,7 @@ public class InvitationModel {
 				for (int tw : ttable.ttable.keySet()) {
 					HashIntFloatMap tMap = ttable.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						float prob = logAdd((float)Math.log(ttable.get(tw, sw)), n) - logAdd((float)Math.log(totals.get(sw)), nV);
+						float prob = (float)Math.log(ttable.get(tw, sw)) - (float)Math.log(totals.get(sw));
 						ttable.put(tw, sw, prob);
 					}
 				}
@@ -359,11 +359,14 @@ public class InvitationModel {
 				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
 				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 				
-				results.put(sent, new Result(sent, sPD[0][sent]));
+				float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[2]);
+				float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[3]);				
+				
+				results.put(sent, new Result(sent, sPD[0][sent], logAdd(srcP,trgP)));
 
 			}
 			
-			PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
+			/* PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
 			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);			
 			
 			if(i==1) {
@@ -373,7 +376,7 @@ public class InvitationModel {
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();			
-			}
+			}*/
 		}
 				
 		latch = new CountDownLatch(1);
@@ -628,7 +631,7 @@ public class InvitationModel {
 						
 						outdomain_token_count += ssent.length;
 	
-						out_score.println(r.sentenceNumber + "\t" + Math.exp(r.score));
+						out_score.println(r.sentenceNumber + "\t" + Math.exp(r.score) + "\t" + Math.exp(r.lm_score));
 	
 						if(j<outdomain_size) {
 						
@@ -682,7 +685,7 @@ public class InvitationModel {
 					for (Result r : sortedResult) {
 						output.println(r.sentenceNumber + "\t"
 								+ Math.exp(r.score) + "\t"
-								+ r.lm_score);
+								+ Math.exp(r.lm_score));
 					}
 					output.close();
 				} catch (FileNotFoundException e) {
@@ -748,7 +751,7 @@ public class InvitationModel {
 				for (int tw : counts.ttable.keySet()) {
 					HashIntFloatMap tMap = counts.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						float newProb = logAdd(counts.get(tw, sw), n) - logAdd(totals.get(sw), nV);
+						float newProb = counts.get(tw, sw) - totals.get(sw);
 						ttable.put(tw, sw, newProb);
 					}
 				}
@@ -831,7 +834,7 @@ public class InvitationModel {
 				for (int tw : counts.ttable.keySet()) {
 					HashIntFloatMap tMap = counts.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						float newProb = logAdd(counts.get(tw, sw), n) - logAdd(totals.get(sw), nV);
+						float newProb = counts.get(tw, sw) - totals.get(sw);
 						ttable.put(tw, sw, newProb);
 					}
 				}
