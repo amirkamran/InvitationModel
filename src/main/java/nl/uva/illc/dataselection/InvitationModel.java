@@ -127,7 +127,7 @@ public class InvitationModel {
 
 	public static HashIntIntMap ignore = HashIntIntMaps.newMutableMap();
 
-	//public static float n = (float)Math.log(1);
+	//public static float n = (float)Math.log(0.3);
 	public static float V = (float)Math.log(100000);
 	//public static float nV = n + V;
 	public static float p = - V;
@@ -482,27 +482,33 @@ public class InvitationModel {
 			// Reinitialize the language models and translation tables
 			
 			if(i==1) {
-				latch = new CountDownLatch(1);
 				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
-				Collections.sort(sortedResult);	
+				Collections.sort(sortedResult);
+				latch = new CountDownLatch(1);
 				Collections.reverse(sortedResult);	
-				writeOutdomain(sortedResult);
+				writeInDomainUpdated(sortedResult);
+				latch.await();				
+				latch = new CountDownLatch(1);
+				Collections.reverse(sortedResult);	
+				writeOutdomainUpdated(sortedResult);
 				latch.await();
-				latch = new CountDownLatch(6);
-				ttable[0] = new TranslationTable();
-				ttable[1] = new TranslationTable();				
-				ttable[2] = new TranslationTable();
-				ttable[3] = new TranslationTable();
-				initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
-				initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);				
-				initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
-				initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
+				latch = new CountDownLatch(4);
+				//ttable[0] = new TranslationTable();
+				//ttable[1] = new TranslationTable();				
+				//ttable[2] = new TranslationTable();
+				//ttable[3] = new TranslationTable();
+				//initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
+				//initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);				
+				//initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
+				//initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
+				createLM(IN + "." + SRC + ".encoded", lm, 0, src_mixdomain);
+				createLM(IN + "." + TRG + ".encoded", lm, 1, trg_mixdomain);				
 				createLM(OUT + "." + SRC + ".encoded", lm, 2, src_mixdomain);
 				createLM(OUT + "." + TRG + ".encoded", lm, 3, trg_mixdomain);				
 				latch.await();
 				
-				PD1 = LOG_0_5;
-				PD0 = LOG_0_5;
+				//PD1 = LOG_0_5;
+				//PD0 = LOG_0_5;
 			}
 
 		}
@@ -582,6 +588,76 @@ public class InvitationModel {
 
 	}
 	
+	public static void writeInDomainUpdated(final ArrayList<Result> results) {
+		
+		jobs.execute(new Runnable() {
+
+			@Override
+			public void run() {
+				log.info("Writing outdomain corpus ... ");
+
+				PrintWriter src_in;
+				PrintWriter trg_in;
+				
+				try {
+					src_in = new PrintWriter(IN + "." + SRC + ".encoded");
+					trg_in = new PrintWriter(IN + "." + TRG + ".encoded");
+					
+					for(int i=0;i<src_indomain.length;i++) {
+						
+						int ssent[] = src_indomain[i];
+						int tsent[] = trg_indomain[i];
+						
+						for (int w = 1; w < ssent.length; w++) {
+							src_in.print(ssent[w]);
+							src_in.print(" ");
+						}
+						src_in.println();
+						for (int w = 1; w < tsent.length; w++) {
+							trg_in.print(tsent[w]);
+							trg_in.print(" ");
+						}
+						trg_in.println();						
+					}
+					
+					for (Result r : results) {
+	
+						int sentIndex = r.sentenceNumber - 1;
+	
+						int ssent[] = src_mixdomain[sentIndex];
+						int tsent[] = trg_mixdomain[sentIndex];
+						
+	
+						if(r.score==0) {
+						
+							for (int w = 1; w < ssent.length; w++) {
+								src_in.print(ssent[w]);
+								src_in.print(" ");
+							}
+							src_in.println();
+							for (int w = 1; w < tsent.length; w++) {
+								trg_in.print(tsent[w]);
+								trg_in.print(" ");
+							}
+							trg_in.println();
+						}
+	
+					}
+	
+					src_in.close();
+					trg_in.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}				
+
+				InvitationModel.latch.countDown();
+				log.info("DONE");				
+			}
+			
+		});
+		
+	}
+	
 	public static void writeOutdomain(final ArrayList<Result> results) {
 		
 		jobs.execute(new Runnable() {
@@ -656,6 +732,75 @@ public class InvitationModel {
 					}
 	
 					out_score.close();
+	
+					src_out.close();
+					trg_out.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}				
+
+				InvitationModel.latch.countDown();
+				log.info("DONE");				
+			}
+			
+		});
+		
+	}	
+	
+	public static void writeOutdomainUpdated(final ArrayList<Result> results) {
+		
+		jobs.execute(new Runnable() {
+
+			@Override
+			public void run() {
+				log.info("Writing outdomain corpus ... ");
+
+				PrintWriter src_out;
+				PrintWriter trg_out;
+				
+				try {
+					src_out = new PrintWriter(OUT + "." + SRC + ".encoded");
+					trg_out = new PrintWriter(OUT + "." + TRG + ".encoded");
+					
+					int outdomain_size = 0;
+					
+					for (Result r : results) {						
+						if(r.score==0) outdomain_size ++;
+					}					
+					
+					src_outdomain = new int[outdomain_size][];
+					trg_outdomain = new int[outdomain_size][];
+					
+					int j = 0;
+
+					for (Result r : results) {
+	
+						int sentIndex = r.sentenceNumber - 1;
+	
+						int ssent[] = src_mixdomain[sentIndex];
+						int tsent[] = trg_mixdomain[sentIndex];
+
+						if(r.score==0) {
+						
+							src_outdomain[j] = ssent;
+							trg_outdomain[j] = tsent;
+		
+							for (int w = 1; w < ssent.length; w++) {
+								src_out.print(ssent[w]);
+								src_out.print(" ");
+							}
+							src_out.println();
+							for (int w = 1; w < tsent.length; w++) {
+								trg_out.print(tsent[w]);
+								trg_out.print(" ");
+							}
+							trg_out.println();
+						}
+	
+						j++;
+												
+						
+					}
 	
 					src_out.close();
 					trg_out.close();
