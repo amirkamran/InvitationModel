@@ -795,11 +795,11 @@ public class InvitationModel {
 								trg_out.print(" ");
 							}
 							trg_out.println();
+							j++;
+						} else {
+							break;
 						}
-	
-						j++;
-												
-						
+							
 					}
 	
 					src_out.close();
