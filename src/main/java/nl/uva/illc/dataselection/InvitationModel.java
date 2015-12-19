@@ -127,9 +127,9 @@ public class InvitationModel {
 
 	public static HashIntIntMap ignore = HashIntIntMaps.newMutableMap();
 
-	public static float n = (float)Math.log(1);
+	//public static float n = (float)Math.log(1);
 	public static float V = (float)Math.log(100000);
-	public static float nV = n + V;
+	//public static float nV = n + V;
 	public static float p = - V;
 	
 	public static void main(String args[]) throws InterruptedException {
@@ -268,7 +268,7 @@ public class InvitationModel {
 				for (int tw : ttable.ttable.keySet()) {
 					HashIntFloatMap tMap = ttable.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						float prob = logAdd((float)Math.log(ttable.get(tw, sw)), n) - logAdd((float)Math.log(totals.get(sw)), nV);
+						float prob = (float)Math.log(ttable.get(tw, sw)) - (float)Math.log(totals.get(sw));
 						ttable.put(tw, sw, prob);
 					}
 				}
