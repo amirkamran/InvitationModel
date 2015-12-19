@@ -337,7 +337,7 @@ public class InvitationModel {
 				if (s==(splits-1)) {
 					end = src_mixdomain.length;
 				}
-				calcualteBurnInScore(start, end, sPD);
+				calcualteBurnInScore(start, end, sPD, src_mixdomain, trg_mixdomain);
 			}
 			latch.await();
 			
@@ -413,6 +413,8 @@ public class InvitationModel {
 			HashIntObjMap<Result> results = HashIntObjMaps.newMutableMap();
 
 			float sPD[][] = new float[2][src_mixdomain.length];
+			float sPDIndomain[][] = new float[2][src_indomain.length];
+			float sPDOutdomain[][] = new float[2][src_outdomain.length];
 
 			int splits = 20;
 			int split_size = src_mixdomain.length / splits;
@@ -424,10 +426,12 @@ public class InvitationModel {
 				if (s==(splits-1)) {
 					end = src_mixdomain.length;
 				}
-				calcualteScore(start, end, sPD);
+				calcualteScore(start, end, sPD, src_mixdomain, trg_mixdomain);
 			}
 			latch.await();
 
+			calcualteScore(0, sPDOutdomain.length, sPDOutdomain, src_outdomain, trg_outdomain);
+			
 			float countPD[] = new float[2];
 			countPD[0] = Float.NEGATIVE_INFINITY;
 			countPD[1] = Float.NEGATIVE_INFINITY;
@@ -446,10 +450,10 @@ public class InvitationModel {
 				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
 				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 
-				//float srcP = lm[0][sent];
-				//float trgP = lm[1][sent];
-				float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]) + lm[1][sent];
-				float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]) + lm[0][sent];
+				float srcP = lm[0][sent];
+				float trgP = lm[1][sent];
+				//float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]) + lm[1][sent];
+				//float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]) + lm[0][sent];
 				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
 
 			}
@@ -472,10 +476,10 @@ public class InvitationModel {
 			if (i < iMAX) {
 				
 				latch = new CountDownLatch(4);
-				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
-				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
-				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
-				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
+				updateTranslationTable(src_indomain, trg_indomain, ttable[0], sPDIndomain[1]);
+				updateTranslationTable(trg_indomain, src_indomain, ttable[1], sPDIndomain[1]);
+				updateTranslationTable(src_outdomain, trg_outdomain, ttable[2], sPDOutdomain[0]);
+				updateTranslationTable(trg_outdomain, src_outdomain, ttable[3], sPDOutdomain[0]);				
 				latch.await();
 			}
 			
@@ -514,8 +518,7 @@ public class InvitationModel {
 		}
 	}
 
-	public static void calcualteScore(final int start, final int end,
-			final float sPD[][]) {
+	public static void calcualteScore(final int start, final int end, final float sPD[][], final int [][]src, final int [][]trg) {
 
 		jobs.execute(new Runnable() {
 
@@ -526,8 +529,8 @@ public class InvitationModel {
 					if (ignore.containsKey(sent))
 						continue;
 
-					int ssent[] = src_mixdomain[sent];
-					int tsent[] = trg_mixdomain[sent];
+					int ssent[] = src[sent];
+					int tsent[] = trg[sent];
 
 					float sProb[] = new float[4];
 
@@ -550,8 +553,7 @@ public class InvitationModel {
 
 	}
 
-	public static void calcualteBurnInScore(final int start, final int end,
-			final float sPD[][]) {
+	public static void calcualteBurnInScore(final int start, final int end, final float sPD[][], final int [][]src, final int [][]trg) {
 
 		jobs.execute(new Runnable() {
 
@@ -562,8 +564,8 @@ public class InvitationModel {
 					if (ignore.containsKey(sent))
 						continue;
 
-					int ssent[] = src_mixdomain[sent];
-					int tsent[] = trg_mixdomain[sent];
+					int ssent[] = src[sent];
+					int tsent[] = trg[sent];
 
 					float sProb[] = new float[4];
 
@@ -596,6 +598,9 @@ public class InvitationModel {
 			public void run() {
 				log.info("Writing outdomain corpus ... ");
 
+				ArrayList<int[]> src = new ArrayList<int[]>();
+				ArrayList<int[]> trg = new ArrayList<int[]>();
+				
 				PrintWriter src_in;
 				PrintWriter trg_in;
 				
@@ -607,6 +612,9 @@ public class InvitationModel {
 						
 						int ssent[] = src_indomain[i];
 						int tsent[] = trg_indomain[i];
+						
+						src.add(ssent);
+						trg.add(tsent);
 						
 						for (int w = 1; w < ssent.length; w++) {
 							src_in.print(ssent[w]);
@@ -627,6 +635,8 @@ public class InvitationModel {
 						int ssent[] = src_mixdomain[sentIndex];
 						int tsent[] = trg_mixdomain[sentIndex];
 						
+						src.add(ssent);
+						trg.add(tsent);						
 	
 						if(r.score==0) {
 						
@@ -640,10 +650,15 @@ public class InvitationModel {
 								trg_in.print(" ");
 							}
 							trg_in.println();
+						} else {
+							break;
 						}
 	
 					}
 	
+					src_indomain = (int[][])src.toArray();
+					trg_indomain = (int[][])trg.toArray();
+					
 					src_in.close();
 					trg_in.close();
 				} catch (IOException e) {
