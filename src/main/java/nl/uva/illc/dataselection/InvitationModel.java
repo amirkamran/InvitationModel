@@ -656,8 +656,13 @@ public class InvitationModel {
 	
 					}
 	
-					src_indomain = (int[][])src.toArray();
-					trg_indomain = (int[][])trg.toArray();
+					src_indomain = new int[src.size()][];
+					trg_indomain = new int[trg.size()][];
+					
+					for(int i=0;i<src.size();i++) {
+						src_indomain[i] = src.get(i);
+						trg_indomain[i] = trg.get(i);
+					}
 					
 					src_in.close();
 					trg_in.close();
