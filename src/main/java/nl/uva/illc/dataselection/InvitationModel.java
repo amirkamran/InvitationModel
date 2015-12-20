@@ -460,8 +460,8 @@ public class InvitationModel {
 
 			}
 
-			float newPD1 = countPD[1] - (float)Math.log(src_mixdomain.length - ignore.size());
-			float newPD0 = countPD[0] - (float)Math.log(src_mixdomain.length - ignore.size());
+			float newPD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
+			float newPD0 = countPD[0] - logAdd(countPD[0], countPD[1]);
 
 			log.info("PD1 ~ PD0 " + Math.exp(newPD1) + " ~ " + Math.exp(newPD0));
 			
