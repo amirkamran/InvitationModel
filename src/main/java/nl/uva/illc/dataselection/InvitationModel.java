@@ -107,8 +107,6 @@ public class InvitationModel {
 	static float lm[][] = null;
 
 	static float LOG_0_5 = (float) Math.log(0.5);
-	
-	static float LOG_2 = (float) Math.log(2);
 		
 	// default confidence threshold: use to decide which sentences
 	// will update the translation table 
@@ -343,9 +341,9 @@ public class InvitationModel {
 			}
 			latch.await();
 			
-			/*float countPD[] = new float[2];
+			float countPD[] = new float[2];
 			countPD[0] = Float.NEGATIVE_INFINITY;
-			countPD[1] = Float.NEGATIVE_INFINITY;*/
+			countPD[1] = Float.NEGATIVE_INFINITY;
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
@@ -358,8 +356,8 @@ public class InvitationModel {
 					continue;
 				}
 
-				//countPD[0] = logAdd(countPD[0], sPD[0][sent]);
-				//countPD[1] = logAdd(countPD[1], sPD[1][sent]);
+				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 				
 				float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[2]);
 				float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[3]);				
@@ -432,6 +430,7 @@ public class InvitationModel {
 			}
 			latch.await();
 
+			calcualteScore(0, sPDIndomain.length, sPDIndomain, src_indomain, trg_indomain);
 			calcualteScore(0, sPDOutdomain.length, sPDOutdomain, src_outdomain, trg_outdomain);
 			
 			float countPD[] = new float[2];
@@ -487,7 +486,7 @@ public class InvitationModel {
 			
 			// Reinitialize the language models and translation tables
 			
-			/*if(i==1) {
+			//if(i==1) {
 				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 				Collections.sort(sortedResult);
 				latch = new CountDownLatch(1);
@@ -515,7 +514,7 @@ public class InvitationModel {
 				
 				//PD1 = LOG_0_5;
 				//PD0 = LOG_0_5;
-			}*/
+			//}
 
 		}
 	}
@@ -544,8 +543,8 @@ public class InvitationModel {
 					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
 					float mix_score = PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
 
-					sPD[1][sent] = in_score  - LOG_2;
-					sPD[0][sent] = mix_score - LOG_2;
+					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
 					
 
 				}
@@ -582,8 +581,8 @@ public class InvitationModel {
 					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
 					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
-					sPD[1][sent] = in_score  - LOG_2;
-					sPD[0][sent] = mix_score - LOG_2;
+					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
 										
 				}
 				InvitationModel.latch.countDown();
@@ -640,7 +639,7 @@ public class InvitationModel {
 						src.add(ssent);
 						trg.add(tsent);						
 	
-						if(r.score>=Math.log(0.7)) {
+						if(r.score==0) {
 						
 							for (int w = 1; w < ssent.length; w++) {
 								src_in.print(ssent[w]);
