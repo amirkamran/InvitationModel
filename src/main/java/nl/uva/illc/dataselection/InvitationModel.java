@@ -127,9 +127,9 @@ public class InvitationModel {
 
 	public static HashIntIntMap ignore = HashIntIntMaps.newMutableMap();
 
-	//public static float n = (float)Math.log(0.3);
+	public static float n = (float)Math.log(0.3);
 	public static float V = (float)Math.log(100000);
-	//public static float nV = n + V;
+	public static float nV = n + V;
 	public static float p = - V;
 	
 	public static void main(String args[]) throws InterruptedException {
@@ -268,7 +268,7 @@ public class InvitationModel {
 				for (int tw : ttable.ttable.keySet()) {
 					HashIntFloatMap tMap = ttable.ttable.get(tw);
 					for (int sw : tMap.keySet()) {
-						float prob = (float)Math.log(ttable.get(tw, sw)) - (float)Math.log(totals.get(sw));
+						float prob = logAdd((float)Math.log(ttable.get(tw, sw)), n) - logAdd((float)Math.log(totals.get(sw)), nV);
 						ttable.put(tw, sw, prob);
 					}
 				}
@@ -319,7 +319,7 @@ public class InvitationModel {
 
 		HashIntObjMap<Result> results = null;
 
-		for (int i = 1; i <= 1; i++) {
+		for (int i = 1; i <= 3; i++) {
 
 			log.info("Iteration " + i);
 
@@ -366,8 +366,10 @@ public class InvitationModel {
 
 			}
 			
-			/* PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
-			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);			
+			PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
+			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);	
+			
+			log.info("PD1 ~ PD0 " + Math.exp(PD1) + " ~ " + Math.exp(PD0));			
 			
 			if(i==1) {
 				latch = new CountDownLatch(4);
@@ -376,7 +378,7 @@ public class InvitationModel {
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();			
-			}*/
+			}
 		}
 				
 		latch = new CountDownLatch(1);
@@ -413,8 +415,6 @@ public class InvitationModel {
 			HashIntObjMap<Result> results = HashIntObjMaps.newMutableMap();
 
 			float sPD[][] = new float[2][src_mixdomain.length];
-			float sPDIndomain[][] = new float[2][src_indomain.length];
-			float sPDOutdomain[][] = new float[2][src_outdomain.length];
 
 			int splits = 20;
 			int split_size = src_mixdomain.length / splits;
@@ -430,9 +430,6 @@ public class InvitationModel {
 			}
 			latch.await();
 
-			calcualteScore(0, sPDIndomain.length, sPDIndomain, src_indomain, trg_indomain);
-			calcualteScore(0, sPDOutdomain.length, sPDOutdomain, src_outdomain, trg_outdomain);
-			
 			float countPD[] = new float[2];
 			countPD[0] = Float.NEGATIVE_INFINITY;
 			countPD[1] = Float.NEGATIVE_INFINITY;
@@ -477,16 +474,16 @@ public class InvitationModel {
 			if (i < iMAX) {
 				
 				latch = new CountDownLatch(4);
-				updateTranslationTable(src_indomain, trg_indomain, ttable[0], sPDIndomain[1]);
-				updateTranslationTable(trg_indomain, src_indomain, ttable[1], sPDIndomain[1]);
-				updateTranslationTable(src_outdomain, trg_outdomain, ttable[2], sPDOutdomain[0]);
-				updateTranslationTable(trg_outdomain, src_outdomain, ttable[3], sPDOutdomain[0]);				
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
+				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
+				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();
 			}
 			
 			// Reinitialize the language models and translation tables
 			
-			//if(i==1) {
+			/*if(i==1) {
 				ArrayList<Result> sortedResult = new ArrayList<Result>(results.values());
 				Collections.sort(sortedResult);
 				latch = new CountDownLatch(1);
@@ -514,7 +511,7 @@ public class InvitationModel {
 				
 				//PD1 = LOG_0_5;
 				//PD0 = LOG_0_5;
-			//}
+			}*/
 
 		}
 	}
@@ -725,9 +722,7 @@ public class InvitationModel {
 	
 						int ssent[] = src_mixdomain[sentIndex];
 						int tsent[] = trg_mixdomain[sentIndex];
-						
-						outdomain_token_count += ssent.length;
-	
+							
 						out_score.println(r.sentenceNumber + "\t" + Math.exp(r.score) + "\t" + Math.exp(r.lm_score));
 	
 						if(j<outdomain_size) {
