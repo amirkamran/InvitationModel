@@ -801,7 +801,7 @@ public class InvitationModel {
 						int ssent[] = src_mixdomain[sentIndex];
 						int tsent[] = trg_mixdomain[sentIndex];
 
-						if(r.score>=Math.log(0.7)) {
+						if(r.score==0) {
 						
 							src_outdomain[j] = ssent;
 							trg_outdomain[j] = tsent;
