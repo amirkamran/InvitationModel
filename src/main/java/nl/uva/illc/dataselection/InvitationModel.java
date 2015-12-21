@@ -329,7 +329,7 @@ public class InvitationModel {
 
 			float sPD[][] = new float[2][src_mixdomain.length];
 
-			int splits = 20;
+			int splits = 10;
 			int split_size = src_mixdomain.length / splits;
 
 			latch = new CountDownLatch(splits);
@@ -415,7 +415,7 @@ public class InvitationModel {
 
 			float sPD[][] = new float[2][src_mixdomain.length];
 
-			int splits = 20;
+			int splits = 10;
 			int split_size = src_mixdomain.length / splits;
 
 			latch = new CountDownLatch(splits);
