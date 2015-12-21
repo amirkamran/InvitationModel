@@ -224,12 +224,12 @@ public class InvitationModel {
 
 		latch.await();
 		
-		String mixFileName = MIX + "." + SRC + ".encoded";
-		runCommand("ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
+		String mixFileName = IN + "." + SRC + ".encoded";
+		runCommand("ngram-count -text " + mixFileName + " -write-order 2 -write " + mixFileName + ".1cnt");
 		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
 		
-		mixFileName = MIX + "." + TRG + ".encoded";
-		runCommand("ngram-count -text " + mixFileName + " -write-order 1 -write " + mixFileName + ".1cnt");
+		mixFileName = IN + "." + TRG + ".encoded";
+		runCommand("ngram-count -text " + mixFileName + " -write-order 2 -write " + mixFileName + ".1cnt");
 		runCommand("awk '$2 > 1' " + mixFileName + ".1cnt | cut -f1 | sort > " + mixFileName + ".vocab");
 		
 		lm = new float[4][];
@@ -1005,7 +1005,7 @@ public class InvitationModel {
 					lm[index][i] = getLMProb(createdLM, sent);
 				}*/
 				
-				String mixFileName = fileName.replace(IN, MIX).replace(OUT, MIX);
+				String mixFileName = fileName.replace(MIX, IN).replace(OUT, IN);
 				
 				runCommand("ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + mixFileName + ".vocab -lm " + fileName + ".lm.gz");
 				runCommand("ngram -debug 1 -unk -lm " + fileName + ".lm.gz -ppl " + mixFileName + " | grep 'zeroprobs.* logprob.* ppl.* ppl1' | awk '{print $4}' | head -n -1 > " + fileName + ".ppl");
