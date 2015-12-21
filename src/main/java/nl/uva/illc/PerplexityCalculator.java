@@ -60,10 +60,10 @@ public class PerplexityCalculator {
 		
 		new File("./temp").mkdir();
 		
-		Future cnt1 = runCommand("./ngram-count -text cin." + src + " -write-order 2 -write ./temp/cin." + src + ".1cnt");
-		Future v1 = runCommand("awk '$2 > 1' ./temp/cin." + src + ".1cnt | cut -f1 | sort > ./temp/cin." + src + ".vocab", cnt1);
-		Future cnt2 = runCommand("./ngram-count -text cin." + trg + " -write-order 1 -write ./temp/cin." + trg + ".1cnt");
-		Future v2 = runCommand("awk '$2 > 1' ./temp/cin." + trg + ".1cnt | cut -f1 | sort > ./temp/cin." + trg + ".vocab", cnt2);
+		Future cnt1 = runCommand("./ngram-count -text cin." + src + " -write-order 2 -write ./temp/cin." + src + ".2cnt");
+		Future v1 = runCommand("awk '$2 > 1' ./temp/cin." + src + ".2cnt | cut -f1 | sort > ./temp/cin." + src + ".vocab", cnt1);
+		Future cnt2 = runCommand("./ngram-count -text cin." + trg + " -write-order 1 -write ./temp/cin." + trg + ".2cnt");
+		Future v2 = runCommand("awk '$2 > 1' ./temp/cin." + trg + ".2cnt | cut -f1 | sort > ./temp/cin." + trg + ".vocab", cnt2);
 		
 		try {
 			v1.get();
