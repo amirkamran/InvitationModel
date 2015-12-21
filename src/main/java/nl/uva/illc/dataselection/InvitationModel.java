@@ -110,15 +110,15 @@ public class InvitationModel {
 		
 	// default confidence threshold: use to decide which sentences
 	// will update the translation table 
-	static float CONF_THRESHOLD = (float) Math.log(0);
+	static float CONF_THRESHOLD = (float) Math.log(0.7);
 	
 	// default convergence threshold: How much change in PD1 is significant
 	// to continue to next iteration
 	static float CONV_THRESHOLD = 0f;
 	
 
-	static float PD1 = LOG_0_5;
-	static float PD0 = LOG_0_5;
+	static float PD1 = 0;
+	static float PD0 = 0;
 
 	static TranslationTable ttable[] = new TranslationTable[4];
 
@@ -163,7 +163,7 @@ public class InvitationModel {
 		options.addOption("src", "src-language", true, "Source Language");
 		options.addOption("trg", "trg-language", true, "Target Language");
 		options.addOption("i", "max-iterations", true, "Maximum Iterations");
-		options.addOption("th", "threshold", true, "This threshold deicdes which sentences updates translation tables. Default is 0");
+		options.addOption("th", "threshold", true, "This threshold deicdes which sentences updates translation tables. Default is 0.7");
 		options.addOption("cf", "conv_threshold", true, "This threshold decide if the convergence is reached. Default is 0, which means ignore this threshold.");		
 
 		CommandLineParser parser = new GnuParser();
@@ -318,8 +318,10 @@ public class InvitationModel {
 		log.info("BurnIN started ... ");
 
 		HashIntObjMap<Result> results = null;
+		
+		int maxItr = 2;
 
-		for (int i = 1; i <= 3; i++) {
+		for (int i = 1; i <= maxItr; i++) {
 
 			log.info("Iteration " + i);
 
@@ -350,7 +352,7 @@ public class InvitationModel {
 				if (ignore.containsKey(sent))
 					continue;
 
-				if (Float.isNaN(sPD[0][sent])) {
+				if (Float.isNaN(sPD[0][sent]) || Float.isNaN(sPD[1][sent])) {
 					ignore.put(sent, sent);
 					log.info("Ignoring " + (sent + 1));
 					continue;
@@ -358,11 +360,8 @@ public class InvitationModel {
 
 				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
 				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
-				
-				float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[2]);
-				float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[3]);				
-				
-				results.put(sent, new Result(sent, sPD[0][sent], logAdd(srcP,trgP)));
+								
+				results.put(sent, new Result(sent, sPD[0][sent]));
 
 			}
 			
@@ -371,7 +370,7 @@ public class InvitationModel {
 			
 			log.info("PD1 ~ PD0 " + Math.exp(PD1) + " ~ " + Math.exp(PD0));			
 			
-			if(i==1) {
+			if(i<maxItr) {
 				latch = new CountDownLatch(4);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
@@ -396,8 +395,8 @@ public class InvitationModel {
 
 		log.info("Starting Invitation EM ...");
 		
-		PD1 = LOG_0_5;
-		PD0 = LOG_0_5;
+		PD1 = 0;
+		PD0 = 0;
 		ttable[0] = new TranslationTable();
 		ttable[1] = new TranslationTable();				
 		ttable[2] = new TranslationTable();
@@ -531,14 +530,17 @@ public class InvitationModel {
 					int tsent[] = trg[sent];
 
 					float sProb[] = new float[4];
+					
+					float p0_2[] = calculateProb(ssent, tsent, ttable[0], ttable[2]);					
+					float p1_3[] = calculateProb(tsent, ssent, ttable[1], ttable[3]);
+					
+					sProb[0] = p0_2[0];
+					sProb[1] = p1_3[0];
+					sProb[2] = p0_2[1];
+					sProb[3] = p1_3[1];
 
-					sProb[0] = calculateProb(ssent, tsent, ttable[0]);
-					sProb[1] = calculateProb(tsent, ssent, ttable[1]);
-					sProb[2] = calculateProb(ssent, tsent, ttable[2]);
-					sProb[3] = calculateProb(tsent, ssent, ttable[3]);
-
-					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
-					float mix_score = PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
+					float in_score  = LOG_0_5 + PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
+					float mix_score = LOG_0_5 + PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
 
 					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
 					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
@@ -588,93 +590,6 @@ public class InvitationModel {
 
 	}
 	
-	public static void writeInDomainUpdated(final ArrayList<Result> results) {
-		
-		jobs.execute(new Runnable() {
-
-			@Override
-			public void run() {
-				log.info("Writing outdomain corpus ... ");
-
-				ArrayList<int[]> src = new ArrayList<int[]>();
-				ArrayList<int[]> trg = new ArrayList<int[]>();
-				
-				PrintWriter src_in;
-				PrintWriter trg_in;
-				
-				try {
-					src_in = new PrintWriter(IN + "." + SRC + ".encoded");
-					trg_in = new PrintWriter(IN + "." + TRG + ".encoded");
-					
-					for(int i=0;i<src_indomain.length;i++) {
-						
-						int ssent[] = src_indomain[i];
-						int tsent[] = trg_indomain[i];
-						
-						src.add(ssent);
-						trg.add(tsent);
-						
-						for (int w = 1; w < ssent.length; w++) {
-							src_in.print(ssent[w]);
-							src_in.print(" ");
-						}
-						src_in.println();
-						for (int w = 1; w < tsent.length; w++) {
-							trg_in.print(tsent[w]);
-							trg_in.print(" ");
-						}
-						trg_in.println();						
-					}
-					
-					for (Result r : results) {
-	
-						int sentIndex = r.sentenceNumber - 1;
-	
-						int ssent[] = src_mixdomain[sentIndex];
-						int tsent[] = trg_mixdomain[sentIndex];
-						
-						src.add(ssent);
-						trg.add(tsent);						
-	
-						if(r.score==0) {
-						
-							for (int w = 1; w < ssent.length; w++) {
-								src_in.print(ssent[w]);
-								src_in.print(" ");
-							}
-							src_in.println();
-							for (int w = 1; w < tsent.length; w++) {
-								trg_in.print(tsent[w]);
-								trg_in.print(" ");
-							}
-							trg_in.println();
-						} else {
-							break;
-						}
-	
-					}
-	
-					src_indomain = new int[src.size()][];
-					trg_indomain = new int[trg.size()][];
-					
-					for(int i=0;i<src.size();i++) {
-						src_indomain[i] = src.get(i);
-						trg_indomain[i] = trg.get(i);
-					}
-					
-					src_in.close();
-					trg_in.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}				
-
-				InvitationModel.latch.countDown();
-				log.info("DONE");				
-			}
-			
-		});
-		
-	}
 	
 	public static void writeOutdomain(final ArrayList<Result> results) {
 		
@@ -744,7 +659,8 @@ public class InvitationModel {
 	
 						j++;
 												
-						
+						src_out.flush();
+						trg_out.flush();
 					}
 	
 					out_score.close();
@@ -763,75 +679,6 @@ public class InvitationModel {
 		
 	}	
 	
-	public static void writeOutdomainUpdated(final ArrayList<Result> results) {
-		
-		jobs.execute(new Runnable() {
-
-			@Override
-			public void run() {
-				log.info("Writing outdomain corpus ... ");
-
-				PrintWriter src_out;
-				PrintWriter trg_out;
-				
-				try {
-					src_out = new PrintWriter(OUT + "." + SRC + ".encoded");
-					trg_out = new PrintWriter(OUT + "." + TRG + ".encoded");
-					
-					int outdomain_size = 0;
-					
-					for (Result r : results) {						
-						if(r.score==0) outdomain_size ++;
-					}					
-					
-					src_outdomain = new int[outdomain_size][];
-					trg_outdomain = new int[outdomain_size][];
-					
-					int j = 0;
-
-					for (Result r : results) {
-	
-						int sentIndex = r.sentenceNumber - 1;
-	
-						int ssent[] = src_mixdomain[sentIndex];
-						int tsent[] = trg_mixdomain[sentIndex];
-
-						if(r.score==0) {
-						
-							src_outdomain[j] = ssent;
-							trg_outdomain[j] = tsent;
-		
-							for (int w = 1; w < ssent.length; w++) {
-								src_out.print(ssent[w]);
-								src_out.print(" ");
-							}
-							src_out.println();
-							for (int w = 1; w < tsent.length; w++) {
-								trg_out.print(tsent[w]);
-								trg_out.print(" ");
-							}
-							trg_out.println();
-							j++;
-						} else {
-							break;
-						}
-							
-					}
-	
-					src_out.close();
-					trg_out.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}				
-
-				InvitationModel.latch.countDown();
-				log.info("DONE");				
-			}
-			
-		});
-		
-	}
-
 	public static void writeResult(final int iterationNumber,
 			final HashIntObjMap<Result> results) {
 
