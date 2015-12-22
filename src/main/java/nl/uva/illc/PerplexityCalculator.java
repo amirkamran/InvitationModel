@@ -78,10 +78,10 @@ public class PerplexityCalculator {
 			Future f1 = splitFile(fileName, src, trg, tokens, splits, upto);
 			for(int j=1;j<=upto;j++) {
 				//Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cin." +src+ ".vocab -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
-				Future f2 = runCommand("./ngram-count -interpolate -order 5 -kndiscount -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
+				Future f2 = runCommand("./ngram-count -interpolate -order 4 -kndiscount -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
 				Future f3 = runCommand("./ngram -lm ./temp/" + fileName+"."+src+"."+j +".lm -ppl ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
 				//Future f4 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cin." +trg+ ".vocab -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
-				Future f4 = runCommand("./ngram-count -interpolate -order 5 -kndiscount -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
+				Future f4 = runCommand("./ngram-count -interpolate -order 4 -kndiscount -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
 				Future f5 = runCommand("./ngram -lm ./temp/" + fileName+"."+trg+"."+j +".lm -ppl ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);				
 				readPpl(src_perp, "./temp/" + fileName+"."+src+"."+j + ".ppl", i, j-1, f3);
 				readPpl(trg_perp, "./temp/" + fileName+"."+trg+"."+j + ".ppl", i, j-1, f5);
