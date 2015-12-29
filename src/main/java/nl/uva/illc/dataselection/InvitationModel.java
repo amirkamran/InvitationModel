@@ -863,8 +863,8 @@ public class InvitationModel {
 		latch = new CountDownLatch(4);
 		writeEncodedFile(IN  + "." + SRC + ".encoded", src_mixdomain, 0, indomain_size);
 		writeEncodedFile(IN  + "." + TRG + ".encoded", trg_mixdomain, 0, indomain_size);
-		writeEncodedFile(MIX + "." + SRC + ".encoded", src_mixdomain, 0, mixdomain_size);
-		writeEncodedFile(MIX + "." + TRG + ".encoded", trg_mixdomain, 0, mixdomain_size);		
+		writeEncodedFile(MIX + "." + SRC + ".encoded", src_mixdomain, 0, indomain_size+mixdomain_size);
+		writeEncodedFile(MIX + "." + TRG + ".encoded", trg_mixdomain, 0, indomain_size+mixdomain_size);		
 		
 		for(int i=0;i<indomain_size;i++) {
 			indomain_token_count += src_mixdomain[i].length;
