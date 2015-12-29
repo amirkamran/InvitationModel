@@ -18,15 +18,14 @@
 
 package nl.uva.illc.dataselection;
 
-import edu.berkeley.nlp.lm.ConfigOptions;
+/*import edu.berkeley.nlp.lm.ConfigOptions;
 import edu.berkeley.nlp.lm.NgramLanguageModel;
 import edu.berkeley.nlp.lm.StringWordIndexer;
 import edu.berkeley.nlp.lm.io.ArpaLmReader;
-import edu.berkeley.nlp.lm.io.LmReaders;
+import edu.berkeley.nlp.lm.io.LmReaders;*/
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -38,7 +37,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -131,7 +129,7 @@ public class InvitationModel {
 	public static HashIntIntMap ignore = HashIntIntMaps.newMutableMap();
 
 	public static float n = (float)Math.log(0.3);
-	public static float V = (float)Math.log(100000);
+	public static float V = (float)Math.log(500000);
 	public static float nV = n + V;
 	public static float p = - V;
 	
@@ -227,13 +225,13 @@ public class InvitationModel {
 
 		latch.await();
 		
-		/*String inFileName = IN + "." + SRC + ".encoded";
+		String inFileName = IN + "." + SRC + ".encoded";
 		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write " + inFileName + ".1cnt");
 		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");
 		
 		inFileName = IN + "." + TRG + ".encoded";
 		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write " + inFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");*/
+		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");
 		
 		lm = new float[4][];
 		
@@ -322,7 +320,7 @@ public class InvitationModel {
 
 		HashIntObjMap<Result> results = null;
 		
-		int maxItr = 2;
+		int maxItr = 1;
 
 		for (int i = 1; i <= maxItr; i++) {
 
@@ -346,9 +344,9 @@ public class InvitationModel {
 			}
 			latch.await();
 			
-			float countPD[] = new float[2];
+			/*float countPD[] = new float[2];
 			countPD[0] = Float.NEGATIVE_INFINITY;
-			countPD[1] = Float.NEGATIVE_INFINITY;
+			countPD[1] = Float.NEGATIVE_INFINITY;*/
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
@@ -361,26 +359,28 @@ public class InvitationModel {
 					continue;
 				}
 
-				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
-				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
-								
-				results.put(sent, new Result(sent, sPD[0][sent]));
+				// countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				// countPD[1] = logAdd(countPD[1], sPD[1][sent]);
+				
+				if(sent >= indomain_size) {
+					results.put(sent, new Result(sent, sPD[0][sent]));
+				}
 
 			}
 			
-			PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
-			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);	
+			// PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
+			// PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);	
 			
 			//log.info("PD1 ~ PD0 " + Math.exp(PD1) + " ~ " + Math.exp(PD0));			
 			
-			if(i<maxItr) {
+			/* if(i<maxItr) {
 				latch = new CountDownLatch(4);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], sPD[1]);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[2], sPD[0]);
 				updateTranslationTable(trg_mixdomain, src_mixdomain, ttable[3], sPD[0]);				
 				latch.await();			
-			}
+			}*/
 		}
 				
 		latch = new CountDownLatch(1);
@@ -447,15 +447,16 @@ public class InvitationModel {
 					continue;
 				}
 
+				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
+				
 				if(sent >= indomain_size) {
-					countPD[0] = logAdd(countPD[0], sPD[0][sent]);
-					countPD[1] = logAdd(countPD[1], sPD[1][sent]);
-
+					
 					float srcP = lm[0][sent];
 					float trgP = lm[1][sent];
 					//float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]) + lm[1][sent];
 					//float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]) + lm[0][sent];
-					results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
+					results.put(sent, new Result(sent, sPD[1][sent], srcP + trgP));
 				}
 
 			}
@@ -853,15 +854,22 @@ public class InvitationModel {
 		readFile(IN + "." + SRC, src_codes, src_mixdomain, 0);
 		readFile(IN + "." + TRG, trg_codes, trg_mixdomain, 0);
 		latch.await();
-
+		
 		latch = new CountDownLatch(2);
 		readFile(MIX + "." + SRC, src_codes, src_mixdomain, indomain_size);
 		readFile(MIX + "." + TRG, trg_codes, trg_mixdomain, indomain_size);
 		latch.await();
 		
+		latch = new CountDownLatch(4);
+		writeEncodedFile(IN  + "." + SRC + ".encoded", src_mixdomain, 0, indomain_size);
+		writeEncodedFile(IN  + "." + TRG + ".encoded", trg_mixdomain, 0, indomain_size);
+		writeEncodedFile(MIX + "." + SRC + ".encoded", src_mixdomain, 0, mixdomain_size);
+		writeEncodedFile(MIX + "." + TRG + ".encoded", trg_mixdomain, 0, mixdomain_size);		
+		
 		for(int i=0;i<indomain_size;i++) {
 			indomain_token_count += src_mixdomain[i].length;
 		}
+		latch.await();
 
 	}
 
@@ -900,7 +908,6 @@ public class InvitationModel {
 					e.printStackTrace();
 					System.exit(1);
 				}
-				writeEncodedFile(fileName + ".encoded", lines, start, i);
 				log.info(fileName + " ... DONE");
 				InvitationModel.latch.countDown();
 			}
@@ -908,31 +915,37 @@ public class InvitationModel {
 	}
 
 	public static void writeEncodedFile(final String fileName, final int lines[][], final int start, final int end) {
-		try {
-			BufferedWriter encodedWriter = new BufferedWriter(
-					new OutputStreamWriter(new FileOutputStream(
-							fileName), Charset.forName("UTF8")));
-			for (int i = start; i < end; i++) {
-				for (int j = 1; j < lines[i].length; j++) {
-					int word = lines[i][j];
-					encodedWriter.write("" + word);
-					encodedWriter.write(" ");
+		jobs.execute(new Runnable() {
+			@Override
+			public void run() {		
+				try {
+					BufferedWriter encodedWriter = new BufferedWriter(
+							new OutputStreamWriter(new FileOutputStream(
+									fileName), Charset.forName("UTF8")));
+					for (int i = start; i < end; i++) {
+						for (int j = 1; j < lines[i].length; j++) {
+							int word = lines[i][j];
+							encodedWriter.write("" + word);
+							encodedWriter.write(" ");
+						}
+						encodedWriter.write("\n");
+					}
+					encodedWriter.close();
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
-				encodedWriter.write("\n");
+				InvitationModel.latch.countDown();
 			}
-			encodedWriter.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		});
 	}
 
-	public static float getLMProb(NgramLanguageModel<String> lm, int sent[]) {
+/*	public static float getLMProb(NgramLanguageModel<String> lm, int sent[]) {
 		List<String> words = new ArrayList<String>();
 		for (int i = 1; i < sent.length; i++) {
 			words.add("" + sent[i]);
 		}
 		return lm.getLogProb(words);
-	}
+	}*/
 
 	public static void createLM(final String fileName, final float lm[][],
 			final int index, final int corpus[][]) {
@@ -943,7 +956,7 @@ public class InvitationModel {
 			public void run() {
 				log.info("Creating language model");
 
-				NgramLanguageModel<String> createdLM = null;
+				/*NgramLanguageModel<String> createdLM = null;
 				final int lmOrder = 5;
 				final List<String> inputFiles = new ArrayList<String>();
 				inputFiles.add(fileName);
@@ -962,9 +975,9 @@ public class InvitationModel {
 				for (int i = 0; i < corpus.length; i++) {
 					int sent[] = corpus[i];
 					lm[index][i] = getLMProb(createdLM, sent);
-				}
+				}*/
 				
-				/*String inFileName = fileName.replace(OUT, IN);
+				String inFileName = fileName.replace(OUT, IN);
 				String mixFileName = inFileName.replace(IN, MIX);
 				
 				runCommand("ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + inFileName + ".vocab -lm " + fileName + ".lm.gz");
@@ -988,7 +1001,7 @@ public class InvitationModel {
 					reader.close();
 				} catch(Exception e) {
 					throw new RuntimeException(e);
-				}*/
+				}
 
 				log.info(".");
 
