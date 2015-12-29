@@ -226,12 +226,10 @@ public class InvitationModel {
 		latch.await();
 		
 		String inFileName = IN + "." + SRC + ".encoded";
-		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write " + inFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");
+		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write-vocab " + inFileName + ".vocab");
 		
 		inFileName = IN + "." + TRG + ".encoded";
-		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write " + inFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");
+		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write-vocab " + inFileName + ".vocab");
 		
 		lm = new float[4][];
 		
@@ -435,6 +433,10 @@ public class InvitationModel {
 			float countPD[] = new float[2];
 			countPD[0] = Float.NEGATIVE_INFINITY;
 			countPD[1] = Float.NEGATIVE_INFINITY;
+			
+			float reportPD[] = new float[2];
+			reportPD[0] = Float.NEGATIVE_INFINITY;
+			reportPD[1] = Float.NEGATIVE_INFINITY;			
 
 			for (int sent = 0; sent < src_mixdomain.length; sent++) {
 
@@ -452,19 +454,25 @@ public class InvitationModel {
 				
 				if(sent >= indomain_size) {
 					
-					float srcP = lm[0][sent];
-					float trgP = lm[1][sent];
-					//float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]) + lm[1][sent];
-					//float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]) + lm[0][sent];
-					results.put(sent, new Result(sent, sPD[1][sent], srcP + trgP));
+					reportPD[0] = logAdd(reportPD[0], sPD[0][sent]);
+					reportPD[1] = logAdd(reportPD[1], sPD[1][sent]);					
+					
+					//float srcP = lm[0][sent];
+					//float trgP = lm[1][sent];
+					float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]) + lm[1][sent];
+					float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]) + lm[0][sent];
+					results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
 				}
 
 			}
 
 			float newPD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
 			float newPD0 = countPD[0] - logAdd(countPD[0], countPD[1]);
+			
+			float reportPD1 = reportPD[1] - logAdd(reportPD[0], reportPD[1]);
+			float reportPD0 = reportPD[0] - logAdd(reportPD[0], reportPD[1]);
 
-			log.info("PD1 ~ PD0 " + Math.exp(newPD1) + " ~ " + Math.exp(newPD0));
+			log.info("PD1 ~ PD0 " + Math.exp(reportPD1) + " ~ " + Math.exp(reportPD0));
 			
 			writeResult(i, results);
 			
