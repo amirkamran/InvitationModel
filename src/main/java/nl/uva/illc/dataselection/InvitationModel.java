@@ -91,9 +91,12 @@ public class InvitationModel {
 	static String OUT = "outdomain";
 
 	static int iMAX = 10;
+	
+	static int indomain_size = 0;
+	static int mixdomain_size = 0;
 
-	static int src_indomain[][] = null;
-	static int trg_indomain[][] = null;
+	//static int src_indomain[][] = null;
+	//static int trg_indomain[][] = null;
 	static int src_mixdomain[][] = null;
 	static int trg_mixdomain[][] = null;
 	static int src_outdomain[][] = null;
@@ -117,8 +120,8 @@ public class InvitationModel {
 	static float CONV_THRESHOLD = 0f;
 	
 
-	static float PD1 = 0;
-	static float PD0 = 0;
+	static float PD1 = LOG_0_5;
+	static float PD0 = LOG_0_5;
 
 	static TranslationTable ttable[] = new TranslationTable[4];
 
@@ -214,8 +217,8 @@ public class InvitationModel {
 
 		latch = new CountDownLatch(2);
 
-		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
-		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);
+		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], 0, indomain_size);
+		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], 0, indomain_size);
 		
 		// initialize the outdomain with normal distribution ??
 
@@ -225,12 +228,12 @@ public class InvitationModel {
 		latch.await();
 		
 		String inFileName = IN + "." + SRC + ".encoded";
-		runCommand("ngram-count -text " + inFileName + " -write-order 2 -write " + inFileName + ".2cnt");
-		runCommand("awk '$2 > 1' " + inFileName + ".2cnt | cut -f1 | sort > " + inFileName + ".vocab");
+		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write " + inFileName + ".1cnt");
+		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");
 		
 		inFileName = IN + "." + TRG + ".encoded";
-		runCommand("ngram-count -text " + inFileName + " -write-order 2 -write " + inFileName + ".2cnt");
-		runCommand("awk '$2 > 1' " + inFileName + ".2cnt | cut -f1 | sort > " + inFileName + ".vocab");
+		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write " + inFileName + ".1cnt");
+		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");
 		
 		lm = new float[4][];
 		
@@ -238,7 +241,7 @@ public class InvitationModel {
 	}
 
 	public static void initializeTranslationTable(final int src[][],
-			final int trg[][], final TranslationTable ttable) {
+			final int trg[][], final TranslationTable ttable, final int start, final int end) {
 
 		jobs.execute(new Runnable() {
 
@@ -247,7 +250,7 @@ public class InvitationModel {
 
 				HashIntFloatMap totals = HashIntFloatMaps.newMutableMap();
 
-				for (int sent = 0; sent < src.length; sent++) {
+				for (int sent = start; sent < end; sent++) {
 
 					if (sent % 100000 == 0)
 						log.debug("Sentence " + sent);
@@ -368,7 +371,7 @@ public class InvitationModel {
 			PD1 = countPD[1] - logAdd(countPD[0], countPD[1]);
 			PD0 = countPD[0] - logAdd(countPD[0], countPD[1]);	
 			
-			log.info("PD1 ~ PD0 " + Math.exp(PD1) + " ~ " + Math.exp(PD0));			
+			//log.info("PD1 ~ PD0 " + Math.exp(PD1) + " ~ " + Math.exp(PD0));			
 			
 			if(i<maxItr) {
 				latch = new CountDownLatch(4);
@@ -403,10 +406,10 @@ public class InvitationModel {
 		ttable[3] = new TranslationTable();		
 		
 		latch = new CountDownLatch(4);
-		initializeTranslationTable(src_indomain, trg_indomain, ttable[0]);
-		initializeTranslationTable(trg_indomain, src_indomain, ttable[1]);		
-		initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2]);
-		initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3]);
+		initializeTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], 0, indomain_size);
+		initializeTranslationTable(trg_mixdomain, src_mixdomain, ttable[1], 0, indomain_size);		
+		initializeTranslationTable(src_outdomain, trg_outdomain, ttable[2], 0, src_outdomain.length);
+		initializeTranslationTable(trg_outdomain, src_outdomain, ttable[3], 0, src_outdomain.length);
 		latch.await();
 
 		for (int i = 1; i <= iMAX; i++) {
@@ -444,14 +447,16 @@ public class InvitationModel {
 					continue;
 				}
 
-				countPD[0] = logAdd(countPD[0], sPD[0][sent]);
-				countPD[1] = logAdd(countPD[1], sPD[1][sent]);
+				if(sent >= indomain_size) {
+					countPD[0] = logAdd(countPD[0], sPD[0][sent]);
+					countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 
-				float srcP = lm[0][sent];
-				float trgP = lm[1][sent];
-				//float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]) + lm[1][sent];
-				//float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]) + lm[0][sent];
-				results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
+					float srcP = lm[0][sent];
+					float trgP = lm[1][sent];
+					//float srcP = calculateProb(src_mixdomain[sent], trg_mixdomain[sent], ttable[0]) + lm[1][sent];
+					//float trgP = calculateProb(trg_mixdomain[sent], src_mixdomain[sent], ttable[1]) + lm[0][sent];
+					results.put(sent, new Result(sent, sPD[1][sent], logAdd(srcP, trgP)));
+				}
 
 			}
 
@@ -819,41 +824,6 @@ public class InvitationModel {
 		}
 	}
 	
-	
-	public static void updateTranslationTable(final int src1[][],
-			final int trg1[][], final int src2[][], final int trg2[][], final TranslationTable ttable, final float sPD1[], final float sPD2) {
-
-		jobs.execute(new Runnable() {
-
-			@Override
-			public void run() {
-				log.info("Updating translation table ... ");
-
-				TranslationTable counts = new TranslationTable();
-				HashIntFloatMap totals = HashIntFloatMaps.newMutableMap();
-
-				// collect counts
-				InvitationModel.collectCounts(src1, trg1, ttable, sPD1, counts, totals);
-				float sPD2_temp[] = new float[src2.length];
-				Arrays.fill(sPD2_temp, sPD2);
-				InvitationModel.collectCounts(src2, trg2, ttable, sPD2_temp, counts, totals);
-
-				// maximization
-				for (int tw : counts.ttable.keySet()) {
-					HashIntFloatMap tMap = counts.ttable.get(tw);
-					for (int sw : tMap.keySet()) {
-						float newProb = counts.get(tw, sw) - totals.get(sw);
-						ttable.put(tw, sw, newProb);
-					}
-				}
-				log.info("Updating translation table DONE");
-				InvitationModel.latch.countDown();
-			}
-
-		});
-
-	}	
-
 	public static void readFiles() throws IOException, InterruptedException {
 
 		log.info("Reading files");
@@ -866,37 +836,37 @@ public class InvitationModel {
 		LineNumberReader lr = new LineNumberReader(new FileReader(IN + "."
 				+ SRC));
 		lr.skip(Long.MAX_VALUE);
-		int indomain_size = lr.getLineNumber();
+		indomain_size = lr.getLineNumber();
 		lr.close();
 
 		lr = new LineNumberReader(new FileReader(MIX + "." + SRC));
 		lr.skip(Long.MAX_VALUE);
-		int mixdomain_size = lr.getLineNumber();
+		mixdomain_size = lr.getLineNumber();
 		lr.close();
 
-		src_indomain = new int[indomain_size][];
-		trg_indomain = new int[indomain_size][];
-		src_mixdomain = new int[mixdomain_size][];
-		trg_mixdomain = new int[mixdomain_size][];
+		//src_indomain = new int[indomain_size][];
+		//trg_indomain = new int[indomain_size][];
+		src_mixdomain = new int[indomain_size + mixdomain_size][];
+		trg_mixdomain = new int[indomain_size + mixdomain_size][];
 
 		latch = new CountDownLatch(2);
-		readFile(IN + "." + SRC, src_codes, src_indomain);
-		readFile(IN + "." + TRG, trg_codes, trg_indomain);
+		readFile(IN + "." + SRC, src_codes, src_mixdomain, 0);
+		readFile(IN + "." + TRG, trg_codes, trg_mixdomain, 0);
 		latch.await();
 
 		latch = new CountDownLatch(2);
-		readFile(MIX + "." + SRC, src_codes, src_mixdomain);
-		readFile(MIX + "." + TRG, trg_codes, trg_mixdomain);
+		readFile(MIX + "." + SRC, src_codes, src_mixdomain, indomain_size);
+		readFile(MIX + "." + TRG, trg_codes, trg_mixdomain, indomain_size);
 		latch.await();
 		
-		for(int i=0;i<src_indomain.length;i++) {
-			indomain_token_count += src_indomain[i].length;
+		for(int i=0;i<indomain_size;i++) {
+			indomain_token_count += src_mixdomain[i].length;
 		}
 
 	}
 
 	public static void readFile(final String fileName,
-			final HashObjIntMap<String> codes, final int lines[][])
+			final HashObjIntMap<String> codes, final int lines[][], final int start)
 			throws IOException {
 		jobs.execute(new Runnable() {
 			@Override
@@ -907,7 +877,7 @@ public class InvitationModel {
 									new FileInputStream(fileName), Charset
 											.forName("UTF8")));
 					String line = null;
-					int i = 0;
+					int i = start;
 					while ((line = reader.readLine()) != null) {
 						String words[] = line.split("\\s+");
 						lines[i] = new int[words.length + 1];
