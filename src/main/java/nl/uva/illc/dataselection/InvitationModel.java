@@ -227,13 +227,13 @@ public class InvitationModel {
 
 		latch.await();
 		
-		String inFileName = IN + "." + SRC + ".encoded";
+		/*String inFileName = IN + "." + SRC + ".encoded";
 		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write " + inFileName + ".1cnt");
 		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");
 		
 		inFileName = IN + "." + TRG + ".encoded";
 		runCommand("ngram-count -text " + inFileName + " -write-order 1 -write " + inFileName + ".1cnt");
-		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");
+		runCommand("awk '$2 > 1' " + inFileName + ".1cnt | cut -f1 | sort > " + inFileName + ".vocab");*/
 		
 		lm = new float[4][];
 		
@@ -643,7 +643,7 @@ public class InvitationModel {
 						int ssent[] = src_mixdomain[sentIndex];
 						int tsent[] = trg_mixdomain[sentIndex];
 							
-						out_score.println(r.sentenceNumber + "\t" + Math.exp(r.score) + "\t" + Math.exp(r.lm_score));
+						out_score.println((r.sentenceNumber-indomain_size) + "\t" + Math.exp(r.score) + "\t" + Math.exp(r.lm_score));
 	
 						if(j<outdomain_size) {
 						
@@ -696,7 +696,7 @@ public class InvitationModel {
 				try {
 					PrintWriter output = new PrintWriter("output_" + iterationNumber + ".txt");
 					for (Result r : sortedResult) {
-						output.println(r.sentenceNumber + "\t"
+						output.println((r.sentenceNumber-indomain_size) + "\t"
 								+ Math.exp(r.score) + "\t"
 								+ Math.exp(r.lm_score));
 					}
@@ -943,7 +943,7 @@ public class InvitationModel {
 			public void run() {
 				log.info("Creating language model");
 
-				/*NgramLanguageModel<String> createdLM = null;
+				NgramLanguageModel<String> createdLM = null;
 				final int lmOrder = 5;
 				final List<String> inputFiles = new ArrayList<String>();
 				inputFiles.add(fileName);
@@ -962,9 +962,9 @@ public class InvitationModel {
 				for (int i = 0; i < corpus.length; i++) {
 					int sent[] = corpus[i];
 					lm[index][i] = getLMProb(createdLM, sent);
-				}*/
+				}
 				
-				String inFileName = fileName.replace(OUT, IN);
+				/*String inFileName = fileName.replace(OUT, IN);
 				String mixFileName = inFileName.replace(IN, MIX);
 				
 				runCommand("ngram-count -unk -interpolate -order 5 -kndiscount -text " + fileName + " -vocab " + inFileName + ".vocab -lm " + fileName + ".lm.gz");
@@ -988,7 +988,7 @@ public class InvitationModel {
 					reader.close();
 				} catch(Exception e) {
 					throw new RuntimeException(e);
-				}
+				}*/
 
 				log.info(".");
 
