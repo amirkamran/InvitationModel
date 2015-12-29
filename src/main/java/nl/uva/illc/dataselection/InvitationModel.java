@@ -398,8 +398,8 @@ public class InvitationModel {
 
 		log.info("Starting Invitation EM ...");
 		
-		PD1 = 0;
-		PD0 = 0;
+		PD1 = LOG_0_5;
+		PD0 = LOG_0_5;
 		ttable[0] = new TranslationTable();
 		ttable[1] = new TranslationTable();				
 		ttable[2] = new TranslationTable();
@@ -545,8 +545,8 @@ public class InvitationModel {
 					sProb[2] = p0_2[1];
 					sProb[3] = p1_3[1];
 
-					float in_score  = LOG_0_5 + PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
-					float mix_score = LOG_0_5 + PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
+					float in_score  = PD1 + logAdd(sProb[0] + lm[1][sent], sProb[1] + lm[0][sent]);
+					float mix_score = PD0 + logAdd(sProb[2] + lm[3][sent], sProb[3] + lm[2][sent]);
 
 					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
 					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
