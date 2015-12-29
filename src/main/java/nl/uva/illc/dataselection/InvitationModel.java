@@ -871,13 +871,13 @@ public class InvitationModel {
 		jobs.execute(new Runnable() {
 			@Override
 			public void run() {
+				int i = start;				
 				try {
 					BufferedReader reader = new BufferedReader(
 							new InputStreamReader(
 									new FileInputStream(fileName), Charset
 											.forName("UTF8")));
 					String line = null;
-					int i = start;
 					while ((line = reader.readLine()) != null) {
 						String words[] = line.split("\\s+");
 						lines[i] = new int[words.length + 1];
@@ -900,41 +900,30 @@ public class InvitationModel {
 					e.printStackTrace();
 					System.exit(1);
 				}
-				writeEncodedFile(fileName + ".encoded", lines);
+				writeEncodedFile(fileName + ".encoded", lines, start, i);
 				log.info(fileName + " ... DONE");
 				InvitationModel.latch.countDown();
 			}
 		});
 	}
 
-	public static void writeEncodedFile(final String fileName,
-			final int lines[][]) {
-
-		jobs.execute(new Runnable() {
-
-			@Override
-			public void run() {
-				try {
-					BufferedWriter encodedWriter = new BufferedWriter(
-							new OutputStreamWriter(new FileOutputStream(
-									fileName), Charset.forName("UTF8")));
-					for (int i = 0; i < lines.length; i++) {
-						for (int j = 1; j < lines[i].length; j++) {
-							int word = lines[i][j];
-							encodedWriter.write("" + word);
-							encodedWriter.write(" ");
-						}
-						encodedWriter.write("\n");
-					}
-					encodedWriter.close();
-				} catch (IOException e) {
-					e.printStackTrace();
+	public static void writeEncodedFile(final String fileName, final int lines[][], final int start, final int end) {
+		try {
+			BufferedWriter encodedWriter = new BufferedWriter(
+					new OutputStreamWriter(new FileOutputStream(
+							fileName), Charset.forName("UTF8")));
+			for (int i = start; i < end; i++) {
+				for (int j = 1; j < lines[i].length; j++) {
+					int word = lines[i][j];
+					encodedWriter.write("" + word);
+					encodedWriter.write(" ");
 				}
-
+				encodedWriter.write("\n");
 			}
-
-		});
-
+			encodedWriter.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public static float getLMProb(NgramLanguageModel<String> lm, int sent[]) {
