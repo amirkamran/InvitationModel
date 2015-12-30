@@ -326,7 +326,7 @@ public class InvitationModel {
 
 			results = HashIntObjMaps.newMutableMap();
 
-			/*float sPD[][] = new float[2][src_mixdomain.length];
+			float sPD[][] = new float[2][src_mixdomain.length];
 
 			int splits = 10;
 			int split_size = src_mixdomain.length / splits;
@@ -340,7 +340,7 @@ public class InvitationModel {
 				}
 				calcualteBurnInScore(start, end, sPD, src_mixdomain, trg_mixdomain);
 			}
-			latch.await();*/
+			latch.await();
 			
 			/*float countPD[] = new float[2];
 			countPD[0] = Float.NEGATIVE_INFINITY;
@@ -361,8 +361,8 @@ public class InvitationModel {
 				// countPD[1] = logAdd(countPD[1], sPD[1][sent]);
 				
 				if(sent >= indomain_size) {
-					//results.put(sent, new Result(sent, sPD[0][sent]));
-					results.put(sent, new Result(sent, - logAdd(lm[0][sent], lm[1][sent])));
+					results.put(sent, new Result(sent, sPD[0][sent]));
+					//results.put(sent, new Result(sent, -logAdd(lm[0][sent], lm[1][sent])));
 				}
 
 			}
@@ -592,11 +592,14 @@ public class InvitationModel {
 					sProb[2] = p0_2[1];
 					sProb[3] = p1_3[1];
 
-					float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
-					float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
+					//float in_score  = PD1 + logAdd(sProb[0], sProb[1]);
+					//float mix_score = PD0 + logAdd(sProb[2], sProb[3]);
 
-					sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
-					sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					//sPD[1][sent] = in_score  - logAdd(in_score, mix_score);
+					//sPD[0][sent] = mix_score - logAdd(in_score, mix_score);
+					
+					sPD[0][sent] = -logAdd(sProb[0]+lm[1][sent], sProb[1]+lm[0][sent]);
+					sPD[1][sent] = 0;
 										
 				}
 				InvitationModel.latch.countDown();
