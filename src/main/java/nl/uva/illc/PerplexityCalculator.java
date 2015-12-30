@@ -68,13 +68,13 @@ public class PerplexityCalculator {
 		
 			latch = new CountDownLatch(upto);			
 			for(int j=1;j<=upto;j++) {
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -write ./temp/" + fileName+"."+src+"."+j + ".count -text ./temp/" + fileName+"."+src+"."+j, sf);
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -write-binary ./temp/" + fileName+"."+src+"."+j + ".count -text ./temp/" + fileName+"."+src+"."+j, sf);
 			}			
 			latch.await();
 			
 			latch = new CountDownLatch(upto);			
 			for(int j=1;j<=upto;j++) {
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -write ./temp/" + fileName+"."+trg+"."+j + ".count -text ./temp/" + fileName+"."+trg+"."+j, sf);				
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -write-binary ./temp/" + fileName+"."+trg+"."+j + ".count -text ./temp/" + fileName+"."+trg+"."+j, sf);				
 			}			
 			latch.await();
 			
@@ -94,8 +94,8 @@ public class PerplexityCalculator {
 				readPpl(trg_perp, "./temp/" + fileName+"."+trg+"."+j + ".ppl", i, j-1);
 
 				if(j<upto) {
-					runCommand("./ngram-merge -write ./temp/" + fileName+"."+src+".count.tmp ./temp/" + fileName+"."+src+".count ./temp/" + fileName+"."+src+"."+(j+1));
-					runCommand("./ngram-merge -write ./temp/" + fileName+"."+trg+".count.tmp ./temp/" + fileName+"."+trg+".count ./temp/" + fileName+"."+trg+"."+(j+1));
+					runCommand("./ngram-merge -write ./temp/" + fileName+"."+src+".count.tmp ./temp/" + fileName+"."+src+".count ./temp/" + fileName+"."+src+"."+(j+1)+".count");
+					runCommand("./ngram-merge -write ./temp/" + fileName+"."+trg+".count.tmp ./temp/" + fileName+"."+trg+".count ./temp/" + fileName+"."+trg+"."+(j+1)+".count");
 					runCommand("mv ./temp/"+ fileName+"."+src+".count.tmp ./temp/" + fileName+"."+src+".count");
 					runCommand("mv ./temp/"+ fileName+"."+trg+".count.tmp ./temp/" + fileName+"."+trg+".count");					
 				}
