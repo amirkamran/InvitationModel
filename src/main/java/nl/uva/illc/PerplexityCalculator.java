@@ -68,13 +68,13 @@ public class PerplexityCalculator {
 		
 			latch = new CountDownLatch(upto);			
 			for(int j=1;j<=upto;j++) {
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -write-binary ./temp/" + fileName+"."+src+"."+j + ".count -text ./temp/" + fileName+"."+src+"."+j, sf);
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -write ./temp/" + fileName+"."+src+"."+j + ".count -text ./temp/" + fileName+"."+src+"."+j, sf);
 			}			
 			latch.await();
 			
 			latch = new CountDownLatch(upto);			
 			for(int j=1;j<=upto;j++) {
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -write-binary ./temp/" + fileName+"."+trg+"."+j + ".count -text ./temp/" + fileName+"."+trg+"."+j, sf);				
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -write ./temp/" + fileName+"."+trg+"."+j + ".count -text ./temp/" + fileName+"."+trg+"."+j, sf);				
 			}			
 			latch.await();
 			
