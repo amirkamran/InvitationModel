@@ -60,8 +60,8 @@ public class PerplexityCalculator {
 		
 		new File("./temp").mkdir();
 		
-		Future v1 = runCommand("./ngram-count -text cmix." + src + " -write-order 1 -write-vocab ./temp/cmix." + src + ".vocab");
-		Future v2 = runCommand("./ngram-count -text cmix." + trg + " -write-order 1 -write-vocab ./temp/cmix." + trg + ".vocab");
+		Future v1 = runCommand("./ngram-count -text cin." + src + " -write-order 1 -write-vocab ./temp/cmix." + src + ".vocab");
+		Future v2 = runCommand("./ngram-count -text cin." + trg + " -write-order 1 -write-vocab ./temp/cmix." + trg + ".vocab");
 		
 		try {
 			v1.get();
