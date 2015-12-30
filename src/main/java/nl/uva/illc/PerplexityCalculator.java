@@ -94,8 +94,8 @@ public class PerplexityCalculator {
 				readPpl(trg_perp, "./temp/" + fileName+"."+trg+"."+j + ".ppl", i, j-1);
 
 				if(j<upto) {
-					runCommand("./ngram-merge -write " + fileName+"."+src+".count.tmp ./temp/" + fileName+"."+src+".count ./temp/" + fileName+"."+src+"."+(j+1));
-					runCommand("./ngram-merge -write " + fileName+"."+trg+".count.tmp ./temp/" + fileName+"."+trg+".count ./temp/" + fileName+"."+trg+"."+(j+1));
+					runCommand("./ngram-merge -write ./temp/" + fileName+"."+src+".count.tmp ./temp/" + fileName+"."+src+".count ./temp/" + fileName+"."+src+"."+(j+1));
+					runCommand("./ngram-merge -write ./temp/" + fileName+"."+trg+".count.tmp ./temp/" + fileName+"."+trg+".count ./temp/" + fileName+"."+trg+"."+(j+1));
 					runCommand("mv ./temp/"+ fileName+"."+src+".count.tmp ./temp/" + fileName+"."+src+".count");
 					runCommand("mv ./temp/"+ fileName+"."+trg+".count.tmp ./temp/" + fileName+"."+trg+".count");					
 				}
