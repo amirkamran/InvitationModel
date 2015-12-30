@@ -66,14 +66,18 @@ public class PerplexityCalculator {
 			String fileName = "selected" + (i+files1);
 			Future sf = splitFile(fileName, src, trg, tokens, splits, upto);
 		
-			latch = new CountDownLatch(2*upto);
-			
+			latch = new CountDownLatch(upto);			
 			for(int j=1;j<=upto;j++) {
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -write-binary ./temp/" + fileName+"."+src+"."+j + ".count -text ./temp/" + fileName+"."+src+"."+j, sf);
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -write-binary ./temp/" + fileName+"."+trg+"."+j + ".count -text ./temp/" + fileName+"."+trg+"."+j, sf);				
-			}
-			
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -write ./temp/" + fileName+"."+src+"."+j + ".count -text ./temp/" + fileName+"."+src+"."+j, sf);
+			}			
 			latch.await();
+			
+			latch = new CountDownLatch(upto);			
+			for(int j=1;j<=upto;j++) {
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -write ./temp/" + fileName+"."+trg+"."+j + ".count -text ./temp/" + fileName+"."+trg+"."+j, sf);				
+			}			
+			latch.await();
+			
 			
 			runCommand("cp ./temp/"+ fileName+"."+src+".1.count ./temp/" + fileName+"."+src+".count");
 			runCommand("cp ./temp/"+ fileName+"."+trg+".1.count ./temp/" + fileName+"."+trg+".count");
@@ -208,8 +212,29 @@ public class PerplexityCalculator {
     }
     
     @SuppressWarnings("rawtypes")
-	public static Future runCommand(String command) {
-    	return runCommand(command, null);
-    }
+	public static void runCommand(String command) {
+    	try {
+			System.out.println(command);
+			
+			String [] cmd = {"/bin/sh" , "-c", command};					
+	        Process p = Runtime.getRuntime().exec(cmd);
+	        p.waitFor();
+	        BufferedReader reader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+	        String line = "";
+	        while ((line = reader.readLine()) != null) {
+	        	System.out.println(line);
+	        }
+	        reader.close();
+	        reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+	        while ((line = reader.readLine()) != null) {
+	        	System.out.println(line);
+	        }
+	        reader.close();
+	        
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			System.exit(1);
+		}
+	}
 	
 }
