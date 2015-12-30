@@ -27,10 +27,17 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class PerplexityCalculator {
 	
+	public static CountDownLatch latch = null;
+	public static ExecutorService jobs = Executors.newCachedThreadPool();
 		
+	@SuppressWarnings("rawtypes")
 	public static void main(String args[]) throws InterruptedException, UnsupportedEncodingException, FileNotFoundException {
 		
 		int files1 = Integer.parseInt(args[0]);
@@ -57,12 +64,16 @@ public class PerplexityCalculator {
 		for(int i=0;i<d;i++) {
 						
 			String fileName = "selected" + (i+files1);
-			splitFile(fileName, src, trg, tokens, splits, upto);
+			Future sf = splitFile(fileName, src, trg, tokens, splits, upto);
 		
+			latch = new CountDownLatch(2*upto);
+			
 			for(int j=1;j<=upto;j++) {
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -write-binary ./temp/" + fileName+"."+src+"."+j + ".count -text ./temp/" + fileName+"."+src+"."+j);
-				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -write-binary ./temp/" + fileName+"."+trg+"."+j + ".count -text ./temp/" + fileName+"."+trg+"."+j);				
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -write-binary ./temp/" + fileName+"."+src+"."+j + ".count -text ./temp/" + fileName+"."+src+"."+j, sf);
+				runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -write-binary ./temp/" + fileName+"."+trg+"."+j + ".count -text ./temp/" + fileName+"."+trg+"."+j, sf);				
 			}
+			
+			latch.await();
 			
 			runCommand("cp ./temp/"+ fileName+"."+src+".1.count ./temp/" + fileName+"."+src+".count");
 			runCommand("cp ./temp/"+ fileName+"."+trg+".1.count ./temp/" + fileName+"."+trg+".count");
@@ -78,8 +89,10 @@ public class PerplexityCalculator {
 				readPpl(src_perp, "./temp/" + fileName+"."+src+"."+j + ".ppl", i, j-1);
 				readPpl(trg_perp, "./temp/" + fileName+"."+trg+"."+j + ".ppl", i, j-1);
 
-				runCommand("./ngram-merge -write " + fileName+"."+src+".count ./temp/" + fileName+"."+src+"."+j + ".count ./temp/" + fileName+"."+src+"."+(j+1));
-				runCommand("./ngram-merge -write " + fileName+"."+trg+".count ./temp/" + fileName+"."+trg+"."+j + ".count ./temp/" + fileName+"."+trg+"."+(j+1));
+				if(j<upto) {
+					runCommand("./ngram-merge -write " + fileName+"."+src+".count ./temp/" + fileName+"."+src+".count ./temp/" + fileName+"."+src+"."+(j+1));
+					runCommand("./ngram-merge -write " + fileName+"."+trg+".count ./temp/" + fileName+"."+trg+".count ./temp/" + fileName+"."+trg+"."+(j+1));
+				}
 				
 			}
 						
@@ -107,71 +120,96 @@ public class PerplexityCalculator {
 		}
 	}
 	
-	public static void splitFile(final String fileName, final String src, final String trg, final long tokens, final int splits, final int upto) {
-		try {
-			
-			System.out.println("Spliting file . . . " + fileName);
-			
-			long splitSize = tokens / splits;
-
-			BufferedReader src_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + src), "UTF8"));
-			BufferedReader trg_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + trg), "UTF8"));
-			String line = null;
-			int i = 1;
-			int s = 1;
-			PrintWriter src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + i), "UTF8"));
-			PrintWriter trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + i), "UTF8"));
-			try{
-				while((line=src_reader.readLine())!=null) {
-					s += line.split("\\s+").length;
-					src_out.println(line);
-					trg_out.println(trg_reader.readLine());
-					if(s >= splitSize && i<splits) {
-						s = 1;							
-						src_out.close();
-						trg_out.close();
-						i++;
-						if(i==upto+1) break;
-						src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + i), "UTF8"));
-						trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + i), "UTF8"));
-					}
-				}
-			}catch(Exception e){}
-			src_out.close();
-			trg_out.close();
-			src_reader.close();
-			trg_reader.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}				
+	@SuppressWarnings("rawtypes")
+	public static Future splitFile(final String fileName, final String src, final String trg, final long tokens, final int splits, final int upto) {
+		
+		return jobs.submit(new Runnable() {
+			@Override
+			public void run() {
+		
+				try {
+					
+					System.out.println("Spliting file . . . " + fileName);
+					
+					long splitSize = tokens / splits;
+		
+					BufferedReader src_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + src), "UTF8"));
+					BufferedReader trg_reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName + "." + trg), "UTF8"));
+					String line = null;
+					int i = 1;
+					int s = 1;
+					PrintWriter src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + i), "UTF8"));
+					PrintWriter trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + i), "UTF8"));
+					try{
+						while((line=src_reader.readLine())!=null) {
+							s += line.split("\\s+").length;
+							src_out.println(line);
+							trg_out.println(trg_reader.readLine());
+							if(s >= splitSize && i<splits) {
+								s = 1;							
+								src_out.close();
+								trg_out.close();
+								i++;
+								if(i==upto+1) break;
+								src_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + src + "." + i), "UTF8"));
+								trg_out = new PrintWriter(new OutputStreamWriter(new FileOutputStream("./temp/" + fileName + "." + trg + "." + i), "UTF8"));
+							}
+						}
+					}catch(Exception e){}
+					src_out.close();
+					trg_out.close();
+					src_reader.close();
+					trg_reader.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.exit(1);
+				}	
+			}
+		});
 	}	
 	
 	
-    public static void runCommand(String command) {
-		try { 			
-			System.out.println(command);
+    @SuppressWarnings("rawtypes")
+	public static Future runCommand(final String command, final Future dependent) {
+		return jobs.submit(new Runnable() {
+
+			@Override
+			public void run() {
+				try { 			
+					System.out.println(command);
+					
+					if(dependent != null) {
+						dependent.get();
+					}
+					
+					String [] cmd = {"/bin/sh" , "-c", command};					
+			        Process p = Runtime.getRuntime().exec(cmd);
+			        p.waitFor();
+			        BufferedReader reader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+			        String line = "";
+			        while ((line = reader.readLine()) != null) {
+			        	System.out.println(line);
+			        }
+			        reader.close();
+			        reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			        while ((line = reader.readLine()) != null) {
+			        	System.out.println(line);
+			        }
+			        reader.close();
+			        
+				} catch (Exception e) {
+					System.out.println(e.getMessage());
+					System.exit(1);
+				}
+				PerplexityCalculator.latch.countDown();
+			}
 			
-			String [] cmd = {"/bin/sh" , "-c", command};					
-	        Process p = Runtime.getRuntime().exec(cmd);
-	        p.waitFor();
-	        BufferedReader reader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-	        String line = "";
-	        while ((line = reader.readLine()) != null) {
-	        	System.out.println(line);
-	        }
-	        reader.close();
-	        reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-	        while ((line = reader.readLine()) != null) {
-	        	System.out.println(line);
-	        }
-	        reader.close();
-	        
-		} catch (Exception e) {
-			System.out.println(e.getMessage());
-			System.exit(1);
-		}				
+		});
     }
-	
+    
+    @SuppressWarnings("rawtypes")
+	public static Future runCommand(String command) {
+    	return runCommand(command, null);
+    }
 	
 }
