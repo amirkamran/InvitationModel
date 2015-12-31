@@ -485,7 +485,7 @@ public class InvitationModel {
 			PD1 = newPD1;
 			PD0 = newPD0;
 
-			if (i < iMAX) {
+			if (i>1 && i < iMAX) {
 				
 				latch = new CountDownLatch(4);
 				updateTranslationTable(src_mixdomain, trg_mixdomain, ttable[0], sPD[1]);
