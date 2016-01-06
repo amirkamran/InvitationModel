@@ -36,7 +36,7 @@ import java.util.concurrent.Future;
 
 public class PerplexityCalculator {
 	
-	public static ExecutorService jobs = Executors.newFixedThreadPool(20);
+	public static ExecutorService jobs = Executors.newFixedThreadPool(10);
 	public static CountDownLatch latch = null;
 		
 	@SuppressWarnings("rawtypes")
@@ -74,16 +74,16 @@ public class PerplexityCalculator {
 		latch = new CountDownLatch(2*d*upto);
 		for(int i=0;i<d;i++) {
 			String fileName = "selected" + (i+files1);
-			//Future f1 = splitFile(fileName, src, trg, tokens, splits, upto);
+			Future f1 = splitFile(fileName, src, trg, tokens, splits, upto);
 			for(int j=1;j<=upto;j++) {
 				/*Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
 				Future f3 = runCommand("./ngram -unk -lm ./temp/" + fileName+"."+src+"."+j +".lm -ppl ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
 				Future f4 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
 				Future f5 = runCommand("./ngram -unk -lm ./temp/" + fileName+"."+trg+"."+j +".lm -ppl ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);*/
 				
-				Future f2 = runCommand(mosespath + "/lmplz --interpolate_unigrams 0 -o 5 --limit_vocab_file ./temp/cmix." +src+ ".vocab < ./temp/" + fileName+"."+src+"."+j + " > ./temp/" + fileName+"."+src+"."+j+".lm");
+				Future f2 = runCommand(mosespath + "/lmplz --interpolate_unigrams 0 -o 5 --limit_vocab_file ./temp/cmix." +src+ ".vocab < ./temp/" + fileName+"."+src+"."+j + " > ./temp/" + fileName+"."+src+"."+j+".lm", f1);
 				Future f3 = runCommand(mosespath + "/query ./temp/" + fileName+"."+src+"."+j +".lm < ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
-				Future f4 = runCommand(mosespath + "/lmplz --interpolate_unigrams 0 -o 5 --limit_vocab_file ./temp/cmix." +trg+ ".vocab < ./temp/" + fileName+"."+trg+"."+j + " > ./temp/" + fileName+"."+trg+"."+j+".lm");
+				Future f4 = runCommand(mosespath + "/lmplz --interpolate_unigrams 0 -o 5 --limit_vocab_file ./temp/cmix." +trg+ ".vocab < ./temp/" + fileName+"."+trg+"."+j + " > ./temp/" + fileName+"."+trg+"."+j+".lm", f1);
 				Future f5 = runCommand(mosespath + "/query ./temp/" + fileName+"."+trg+"."+j +".lm < ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);
 				
 				readPpl(src_perp, "./temp/" + fileName+"."+src+"."+j + ".ppl", i, j-1, f3);
