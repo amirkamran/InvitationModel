@@ -119,7 +119,7 @@ public class PerplexityCalculator {
 					}
 					reader.close();
 					
-					String value = lines.get(lines.size()-5).split("\\s+")[3];
+					String value = lines.get(lines.size()-4).split("\\s+")[3];
 					perp[fileNumber][splitNumber] = Double.parseDouble(value);					
 					
 					PerplexityCalculator.latch.countDown();
