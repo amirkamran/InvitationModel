@@ -49,6 +49,7 @@ public class PerplexityCalculator {
 		long tokens = Long.parseLong(args[4]);
 		int splits = Integer.parseInt(args[5]);
 		int upto = Integer.parseInt(args[6]);
+		String mosespath = args[7];
 	
 		double [][]src_perp = null;
 		double [][]trg_perp = null;
@@ -73,12 +74,18 @@ public class PerplexityCalculator {
 		latch = new CountDownLatch(2*d*upto);
 		for(int i=0;i<d;i++) {
 			String fileName = "selected" + (i+files1);
-			Future f1 = splitFile(fileName, src, trg, tokens, splits, upto);
+			//Future f1 = splitFile(fileName, src, trg, tokens, splits, upto);
 			for(int j=1;j<=upto;j++) {
-				Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
+				/*Future f2 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +src+ ".vocab -lm ./temp/" + fileName+"."+src+"."+j+".lm -text ./temp/" + fileName+"."+src+"."+j , f1);
 				Future f3 = runCommand("./ngram -unk -lm ./temp/" + fileName+"."+src+"."+j +".lm -ppl ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
 				Future f4 = runCommand("./ngram-count -unk -interpolate -order 5 -kndiscount -vocab ./temp/cmix." +trg+ ".vocab -lm ./temp/" + fileName+"."+trg+"."+j+".lm -text ./temp/" + fileName+"."+trg+"."+j , f1);
-				Future f5 = runCommand("./ngram -unk -lm ./temp/" + fileName+"."+trg+"."+j +".lm -ppl ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);				
+				Future f5 = runCommand("./ngram -unk -lm ./temp/" + fileName+"."+trg+"."+j +".lm -ppl ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);*/
+				
+				Future f2 = runCommand(mosespath + "/lmplz --interpolate_unigrams 0 -o 5 --limit_vocab_file ./temp/cmix." +src+ ".vocab < ./temp/" + fileName+"."+src+"."+j + " > ./temp/" + fileName+"."+src+"."+j+".lm");
+				Future f3 = runCommand(mosespath + "/query ./temp/" + fileName+"."+src+"."+j +".lm < ./test." + src + " > ./temp/" + fileName+"."+src+"."+j + ".ppl", f2);
+				Future f4 = runCommand(mosespath + "/lmplz --interpolate_unigrams 0 -o 5 --limit_vocab_file ./temp/cmix." +trg+ ".vocab < ./temp/" + fileName+"."+trg+"."+j + " > ./temp/" + fileName+"."+trg+"."+j+".lm");
+				Future f5 = runCommand(mosespath + "/query ./temp/" + fileName+"."+trg+"."+j +".lm < ./test." + trg + " > ./temp/" + fileName+"."+trg+"."+j + ".ppl", f4);
+				
 				readPpl(src_perp, "./temp/" + fileName+"."+src+"."+j + ".ppl", i, j-1, f3);
 				readPpl(trg_perp, "./temp/" + fileName+"."+trg+"."+j + ".ppl", i, j-1, f5);
 			}
@@ -103,14 +110,26 @@ public class PerplexityCalculator {
 			public void run() {
 				try{
 					if(future!=null) future.get();
-						
+					
+					ArrayList<String> lines = new ArrayList<String>();
 					BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), "UTF8"));
+					String line = null;
+					while((line=reader.readLine())!=null) {
+						lines.add(line);
+					}
+					reader.close();
+					
+					String value = lines.get(lines.size()-5).split("\\s+")[3];
+					perp[fileNumber][splitNumber] = Double.parseDouble(value);					
+					
+					PerplexityCalculator.latch.countDown();
+					/*BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), "UTF8"));
 					reader.readLine();
 					String line = reader.readLine();						
 					String value = line.split("\\s+")[5];
 					perp[fileNumber][splitNumber] = Double.parseDouble(value);
 					PerplexityCalculator.latch.countDown();
-					reader.close();
+					reader.close();*/
 					
 				} catch(Exception e) {
 					e.printStackTrace();
